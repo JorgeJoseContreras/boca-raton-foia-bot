@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: foia-bot
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_PASSWORD
+        sync: false
+      - key: IMAP_SERVER
+        value: "imap.gmail.com"
+      - key: SMTP_SERVER
+        value: "smtp.gmail.com"
+      - key: NOTIFICATION_EMAIL
+        sync: false
+      - key: REQUESTOR_FIRST_NAME
+        sync: false
+      - key: REQUESTOR_LAST_NAME
+        sync: false
+      - key: REQUESTOR_PHONE
+        sync: false
+      - key: REQUESTOR_ADDRESS
+        sync: false
+      - key: REQUESTOR_CITY
+        sync: false
+      - key: REQUESTOR_STATE
+        sync: false
+      - key: REQUESTOR_ZIP
+        sync: false
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1
