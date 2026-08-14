@@ -8,10 +8,23 @@ from imapclient import IMAPClient
 from google import genai
 import json
 import traceback
+import requests
 
 from database import log_request, log_response
 
 DEFAULT_TARGET_EMAIL = "brcityclerk@myboca.us"
+
+def send_telegram_notification(message):
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        return
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Telegram notification failed: {e}")
 
 def generate_foia_content():
     """
@@ -100,6 +113,10 @@ def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None
             
         body_preview = body[:150] + "..." if len(body) > 150 else body
         log_request("Sent", "Email Request", target_email, subject, body_preview)
+        
+        # Send Telegram Alert
+        send_telegram_notification(f"✅ <b>FOIA Request Sent</b>\nTo: {target_email}\nSubject: {subject}")
+        
         return {"status": "success", "subject": subject, "recipient": target_email}
         
     except Exception as e:
@@ -167,6 +184,10 @@ def check_inbox():
                 if is_target_sender or has_attachment or is_foia_related:
                     log_response(subject, sender, has_attachment, attachment_name)
                     logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
+                    
+                    # Notify via Telegram
+                    attach_msg = f"\n📎 Attachment: {attachment_name}" if has_attachment else ""
+                    send_telegram_notification(f"📬 <b>New Inbox Activity Detected!</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
                 
         return {"status": "success", "count": len(logs), "logs": logs}
         
