@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boca Raton Public Records Request Manager</title>
+    <title>Multi-City Public Records Request Manager</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -14,7 +14,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1150px;
             margin: 30px auto;
             background: #ffffff;
             border: 1px solid #e1e4e8;
@@ -29,7 +29,7 @@
             align-items: center;
             border-bottom: 2px solid #2b5797;
             padding-bottom: 15px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         h1 {
@@ -44,9 +44,31 @@
             margin-top: 5px;
         }
 
+        .city-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 25px;
+            background: #f0f4f9;
+            padding: 12px 15px;
+            border-radius: 5px;
+            border: 1px solid #d0dbe8;
+        }
+
+        .city-badge {
+            background: #ffffff;
+            border: 1px solid #2b5797;
+            color: #2b5797;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
         .btn-group {
             display: flex;
             gap: 10px;
+            align-items: center;
         }
 
         .btn {
@@ -216,7 +238,9 @@
             padding: 25px;
             border-radius: 6px;
             width: 90%;
-            max-width: 650px;
+            max-width: 750px;
+            max-height: 85vh;
+            overflow-y: auto;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
@@ -229,24 +253,39 @@
             padding-bottom: 10px;
         }
 
-        .form-group {
+        .draft-card {
+            border: 1px solid #e1e4e8;
+            border-radius: 5px;
+            padding: 15px;
             margin-bottom: 15px;
+            background: #fafafa;
+        }
+
+        .draft-card-header {
+            font-weight: bold;
+            color: #2b5797;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
         }
 
         .form-group label {
             display: block;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
             color: #444;
         }
 
         .form-group input[type="text"], .form-group textarea {
             width: 100%;
-            padding: 8px 10px;
+            padding: 6px 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
-            font-size: 13px;
+            font-size: 12px;
             box-sizing: border-box;
             font-family: inherit;
         }
@@ -278,9 +317,8 @@
     <div class="container">
         <header>
             <div>
-                <h1>Public Records Request Manager</h1>
-                <div class="meta-info">City of Boca Raton, FL (Chapter 119 Public Records Law)</div>
-                <div class="meta-info">Sender: <strong>{{ sender_email }}</strong> | Destination: <strong>{{ target_email }}</strong></div>
+                <h1>Multi-City Public Records Request Manager</h1>
+                <div class="meta-info">Florida Chapter 119 Public Records Law | Sender: <strong>{{ sender_email }}</strong></div>
             </div>
             <div class="btn-group">
                 <div style="display: flex; align-items: center; gap: 5px;">
@@ -294,19 +332,27 @@
                     </select>
                 </div>
                 <button class="btn btn-secondary" onclick="checkInbox()">Check Inbox Now</button>
-                <button class="btn" onclick="openPreviewModal()">Send Request Now</button>
+                <button class="btn" onclick="openPreviewModal()">Send All Requests Now</button>
             </div>
         </header>
 
-        <div class="section-title">Outgoing Requests Log</div>
+        <div class="city-badges">
+            <span style="font-size: 12px; font-weight: bold; color: #555; align-self: center; margin-right: 5px;">Target Directory (5 Municipalities):</span>
+            {% for m in municipalities %}
+            <span class="city-badge">{{ m.name }} ({{ m.email }})</span>
+            {% endfor %}
+        </div>
+
+        <div class="section-title">Outgoing Requests Log Across All Cities</div>
         {% if requests %}
         <table>
             <thead>
                 <tr>
-                    <th style="width: 50px;">#</th>
-                    <th style="width: 150px;">Date / Time</th>
-                    <th style="width: 100px;">Status</th>
-                    <th style="width: 160px;">Recipient</th>
+                    <th style="width: 40px;">#</th>
+                    <th style="width: 140px;">Date / Time</th>
+                    <th style="width: 150px;">Municipality</th>
+                    <th style="width: 80px;">Status</th>
+                    <th style="width: 160px;">Recipient Email</th>
                     <th>Generated Subject Line</th>
                     <th>Body Preview</th>
                 </tr>
@@ -316,9 +362,10 @@
                 <tr>
                     <td>{{ req.id }}</td>
                     <td>{{ req.timestamp }}</td>
+                    <td><strong>{{ req.city_name or 'City of Boca Raton' }}</strong></td>
                     <td><span class="status-badge status-{{ req.status|lower }}">{{ req.status }}</span></td>
                     <td>{{ req.recipient_email }}</td>
-                    <td><strong>{{ req.subject }}</strong></td>
+                    <td>{{ req.subject }}</td>
                     <td style="color: #555;">{{ req.body_preview }}</td>
                 </tr>
                 {% endfor %}
@@ -328,7 +375,7 @@
         <p style="color: #777; font-style: italic;">No public records requests have been dispatched yet.</p>
         {% endif %}
 
-        <div class="section-title">Inbox Response Feed</div>
+        <div class="section-title">Inbox Response Feed (All Municipalities)</div>
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
@@ -355,31 +402,20 @@
         </footer>
     </div>
 
-    <!-- Preview & Edit Modal -->
+    <!-- Multi-City Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-content">
-            <div class="modal-header">Review & Edit Public Records Request Email</div>
+            <div class="modal-header">Review & Edit Multi-City FOIA Requests (5 Municipalities)</div>
             
-            <div class="form-group">
-                <label for="modalRecipient">Recipient Email</label>
-                <input type="text" id="modalRecipient" value="{{ target_email }}">
-            </div>
-            
-            <div class="form-group">
-                <label for="modalSubject">Subject Line</label>
-                <input type="text" id="modalSubject" placeholder="Generating AI Subject line...">
-            </div>
-
-            <div class="form-group">
-                <label for="modalBody">Email Body Text</label>
-                <textarea id="modalBody" rows="10" placeholder="Generating AI Email body..."></textarea>
+            <div id="draftsContainer">
+                <p style="color: #666; font-style: italic;">Generating AI drafts for all 5 municipalities...</p>
             </div>
 
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="loadPreview()">Regenerate</button>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button class="btn" onclick="sendCustomEmail()">Send Email Now</button>
+                    <button class="btn" onclick="sendAllCustomEmails()">Send All Emails Now</button>
                 </div>
             </div>
         </div>
@@ -405,47 +441,53 @@
         }
 
         async function loadPreview() {
-            showToast("Generating AI draft with Gemini...");
-            document.getElementById('modalSubject').value = "Generating...";
-            document.getElementById('modalBody').value = "Generating AI content, please wait...";
+            showToast("Generating AI drafts for all 5 municipalities...");
+            const container = document.getElementById('draftsContainer');
+            container.innerHTML = '<p style="color: #666; font-style: italic;">Generating AI drafts with Gemini, please wait...</p>';
             
             try {
                 const res = await fetch('/api/preview', { method: 'POST' });
                 const data = await res.json();
-                document.getElementById('modalSubject').value = data.subject;
-                document.getElementById('modalBody').value = data.body;
-                if (data.recipient) {
-                    document.getElementById('modalRecipient').value = data.recipient;
+                
+                if (data.status === 'success' && data.drafts) {
+                    let html = '';
+                    data.drafts.forEach((d, idx) => {
+                        html += `
+                            <div class="draft-card" data-city="${d.city}">
+                                <div class="draft-card-header">🏛️ ${d.city} (${d.recipient})</div>
+                                <div class="form-group">
+                                    <label>Subject Line</label>
+                                    <input type="text" class="edit-subject" value="${d.subject.replace(/"/g, '&quot;')}">
+                                </div>
+                                <div class="form-group">
+                                    <label>Body Text</label>
+                                    <textarea class="edit-body" rows="4">${d.body}</textarea>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
                 }
             } catch (err) {
-                showToast("Error generating preview.");
+                showToast("Error generating previews.");
             }
         }
 
-        async function sendCustomEmail() {
-            const subject = document.getElementById('modalSubject').value;
-            const body = document.getElementById('modalBody').value;
-            const recipient = document.getElementById('modalRecipient').value;
-
-            if (!subject || !body) {
-                alert("Subject and Body cannot be empty!");
-                return;
-            }
-
+        async function sendAllCustomEmails() {
             closeModal();
-            showToast("Sending email...");
+            showToast("Triggering batch email dispatch across 5 municipalities...");
 
             try {
                 const res = await fetch('/api/trigger', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ subject, body, recipient })
+                    body: JSON.stringify({})
                 });
                 const data = await res.json();
                 showToast(data.message);
-                setTimeout(() => location.reload(), 2500);
+                setTimeout(() => location.reload(), 3000);
             } catch (err) {
-                showToast("Error sending email.");
+                showToast("Error sending batch emails.");
             }
         }
 
@@ -465,7 +507,7 @@
         }
 
         async function checkInbox() {
-            showToast("Checking inbox for replies...");
+            showToast("Checking inbox for replies across all cities...");
             try {
                 const res = await fetch('/api/check_inbox', { method: 'POST' });
                 const data = await res.json();

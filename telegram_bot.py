@@ -5,7 +5,6 @@ import threading
 
 SAVED_CHAT_ID_FILE = "/data/telegram_chat_id.txt" if os.path.exists("/data") else "telegram_chat_id.txt"
 
-# In-memory store for pending email previews per chat_id
 PENDING_DRAFTS = {}
 
 def get_saved_chat_id():
@@ -62,7 +61,7 @@ def get_bottom_keyboard():
     """Returns bottom persistent reply keyboard"""
     return {
         "keyboard": [
-            [{"text": "🚀 Send FOIA Request"}, {"text": "📬 Check Inbox"}],
+            [{"text": "🚀 Send All FOIA Requests"}, {"text": "📬 Check Inbox"}],
             [{"text": "⚙️ Automation Schedule"}]
         ],
         "resize_keyboard": True,
@@ -70,12 +69,12 @@ def get_bottom_keyboard():
     }
 
 def get_preview_inline_keyboard():
-    """Inline buttons attached specifically to the preview bubble"""
+    """Inline buttons attached specifically to the batch preview bubble"""
     return {
         "inline_keyboard": [
             [
-                {"text": "✅ Approve & Send Email", "callback_data": "approve_send"},
-                {"text": "Regenerate", "callback_data": "regenerate_draft"}
+                {"text": "✅ Approve & Send All (5 Cities)", "callback_data": "approve_send_all"},
+                {"text": "Regenerate All", "callback_data": "regenerate_all"}
             ],
             [
                 {"text": "❌ Cancel", "callback_data": "cancel_draft"}
@@ -101,19 +100,25 @@ def get_schedule_inline_keyboard():
         ]
     }
 
-def handle_generate_and_preview(chat_id, edit_message_id=None):
-    from email_engine import generate_foia_content
+def handle_generate_and_preview_all(chat_id, edit_message_id=None):
+    from email_engine import generate_foia_content, TARGET_MUNICIPALITIES
     
-    target_email = os.getenv("TARGET_EMAIL", "brcityclerk@myboca.us")
-    subject, body = generate_foia_content()
-    PENDING_DRAFTS[chat_id] = {"subject": subject, "body": body, "recipient": target_email}
+    drafts = {}
+    preview_items = []
+    
+    for target in TARGET_MUNICIPALITIES:
+        cname = target["name"]
+        cemail = target["email"]
+        sub, bdy = generate_foia_content(city_name=cname)
+        drafts[cname] = {"subject": sub, "body": bdy, "recipient": cemail}
+        preview_items.append(f"• <b>{cname}</b> ({cemail})\n  <i>Subject: {sub}</i>")
+        
+    PENDING_DRAFTS[chat_id] = drafts
     
     preview_txt = (
-        f"📝 <b>FOIA Request Email Draft (Gemini AI)</b>\n\n"
-        f"<b>To:</b> <code>{target_email}</code>\n"
-        f"<b>Subject:</b> {subject}\n\n"
-        f"<b>Body:</b>\n<i>{body}</i>\n\n"
-        f"<i>Review the draft above. Tap Approve to dispatch via SMTP or Regenerate for a new variation.</i>"
+        f"📝 <b>Multi-City FOIA Requests Drafted ({len(TARGET_MUNICIPALITIES)} Municipalities)</b>\n\n"
+        + "\n\n".join(preview_items) +
+        f"\n\n<i>Tap Approve to dispatch all {len(TARGET_MUNICIPALITIES)} emails via SMTP with 6s rate limiting.</i>"
     )
     
     if edit_message_id:
@@ -122,7 +127,7 @@ def handle_generate_and_preview(chat_id, edit_message_id=None):
         send_telegram_msg(chat_id, preview_txt, get_preview_inline_keyboard())
 
 def run_telegram_bot_polling():
-    from email_engine import send_foia_email, check_inbox
+    from email_engine import send_all_foia_requests, check_inbox
     from database import get_setting
     from app import update_schedule_job
     
@@ -154,9 +159,9 @@ def run_telegram_bot_polling():
                             save_chat_id(chat_id)
                             text = msg.get("text", "").strip()
                             
-                            if text == "🚀 Send FOIA Request":
-                                send_telegram_msg(chat_id, "⏳ <b>Generating Gemini AI email draft...</b>", get_bottom_keyboard())
-                                handle_generate_and_preview(chat_id)
+                            if text in ["🚀 Send All FOIA Requests", "🚀 Send FOIA Request"]:
+                                send_telegram_msg(chat_id, "⏳ <b>Generating Gemini AI email drafts for all 5 municipalities...</b>", get_bottom_keyboard())
+                                handle_generate_and_preview_all(chat_id)
                             elif text == "📬 Check Inbox":
                                 send_telegram_msg(chat_id, "🔍 <b>Checking IMAP Inbox for responses...</b>", get_bottom_keyboard())
                                 res = check_inbox()
@@ -168,12 +173,13 @@ def run_telegram_bot_polling():
                                 )
                             elif text == "⚙️ Automation Schedule":
                                 curr_freq = get_setting("schedule_frequency", "off").capitalize()
-                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>\n\nWhen enabled, requests are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
+                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>\n\nWhen enabled, requests for all 5 municipalities are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
                                 send_telegram_msg(chat_id, txt, get_schedule_inline_keyboard())
                             else:
                                 welcome_txt = (
-                                    "🤖 <b>Boca Raton FOIA Automation Bot</b>\n\n"
-                                    "Notifications active! Use the bottom menu buttons below to trigger requests, check inbox, or manage automation schedules:"
+                                    "🤖 <b>Multi-City FOIA Automation Bot</b>\n\n"
+                                    "Notifications active for Boca Raton, Delray Beach, Coconut Creek, Parkland & Hillsboro Beach!\n\n"
+                                    "Use the bottom menu buttons below to trigger dispatches or manage schedules:"
                                 )
                                 send_telegram_msg(chat_id, welcome_txt, get_bottom_keyboard())
                             
@@ -188,42 +194,28 @@ def run_telegram_bot_polling():
                             
                             requests.post(f"https://api.telegram.org/bot{token}/answerCallbackQuery", json={"callback_query_id": cb_id})
                             
-                            if action == "approve_send":
-                                draft = PENDING_DRAFTS.get(chat_id)
-                                if not draft:
-                                    edit_telegram_msg(chat_id, msg_id, "⚠️ <i>Draft expired. Tap 'Send FOIA Request' below to create a new draft.</i>")
-                                    continue
-                                    
-                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Dispatching email via SMTP...</b>")
-                                res = send_foia_email(
-                                    custom_subject=draft["subject"],
-                                    custom_body=draft["body"],
-                                    custom_recipient=draft["recipient"]
-                                )
+                            if action == "approve_send_all":
+                                draft_map = PENDING_DRAFTS.get(chat_id)
+                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Dispatching FOIA emails to all 5 municipalities via SMTP...</b>")
+                                res = send_all_foia_requests(custom_drafts=draft_map)
                                 
-                                if res.get("status") == "success":
-                                    edit_telegram_msg(
-                                        chat_id,
-                                        msg_id,
-                                        f"✅ <b>FOIA Request Approved & Sent!</b>\n\n"
-                                        f"<b>To:</b> {res['recipient']}\n"
-                                        f"<b>Subject:</b> {res['subject']}"
-                                    )
-                                else:
-                                    edit_telegram_msg(
-                                        chat_id,
-                                        msg_id,
-                                        f"❌ <b>SMTP Dispatch Failed:</b> {res.get('message')}"
-                                    )
+                                count = res.get("dispatched", 0)
+                                total = res.get("total", 5)
+                                edit_telegram_msg(
+                                    chat_id,
+                                    msg_id,
+                                    f"✅ <b>Multi-City FOIA Batch Complete!</b>\n\n"
+                                    f"Successfully sent: <b>{count}/{total}</b> emails via SMTP."
+                                )
                                 PENDING_DRAFTS.pop(chat_id, None)
                                 
-                            elif action == "regenerate_draft":
-                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Regenerating new draft with Gemini AI...</b>")
-                                handle_generate_and_preview(chat_id, edit_message_id=msg_id)
+                            elif action == "regenerate_all":
+                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Regenerating new drafts for all 5 municipalities...</b>")
+                                handle_generate_and_preview_all(chat_id, edit_message_id=msg_id)
                                 
                             elif action == "cancel_draft":
                                 PENDING_DRAFTS.pop(chat_id, None)
-                                edit_telegram_msg(chat_id, msg_id, "🚫 <i>Draft cancelled.</i>")
+                                edit_telegram_msg(chat_id, msg_id, "🚫 <i>Batch draft cancelled.</i>")
 
                             elif action.startswith("sched_"):
                                 target_freq = action.replace("sched_", "")
@@ -236,7 +228,7 @@ def run_telegram_bot_polling():
                                     msg_id,
                                     f"✅ <b>Automated Schedule Saved!</b>\n\n"
                                     f"Frequency: <b>{readable}</b>\n\n"
-                                    f"<i>Automated dispatches will now run automatically on this interval without requiring manual confirmation.</i>"
+                                    f"<i>Multi-city dispatches will now run automatically on this interval across all 5 municipalities without requiring manual confirmation.</i>"
                                 )
                                 
         except Exception as e:

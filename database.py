@@ -19,9 +19,16 @@ def init_db():
             record_type TEXT,
             recipient_email TEXT,
             subject TEXT,
-            body_preview TEXT
+            body_preview TEXT,
+            city_name TEXT
         )
     ''')
+    
+    # Try adding city_name column if table existed previously without it
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN city_name TEXT")
+    except sqlite3.OperationalError:
+        pass
     
     # Table for tracking email responses and attachments
     cursor.execute('''
@@ -63,13 +70,13 @@ def set_setting(key, value):
     conn.commit()
     conn.close()
 
-def log_request(status, record_type, recipient_email, subject, body_preview):
+def log_request(status, record_type, recipient_email, subject, body_preview, city_name="City of Boca Raton"):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (status, record_type, recipient_email, subject, body_preview))
+        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview, city_name)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (status, record_type, recipient_email, subject, body_preview, city_name))
     conn.commit()
     req_id = cursor.lastrowid
     conn.close()

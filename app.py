@@ -6,7 +6,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting
-from email_engine import send_foia_email, check_inbox, generate_foia_content
+from email_engine import send_all_foia_requests, check_inbox, generate_foia_content, TARGET_MUNICIPALITIES
 from telegram_bot import start_bot_thread
 
 load_dotenv()
@@ -33,15 +33,15 @@ def update_schedule_job(freq):
     freq_clean = (freq or "off").lower()
     
     if freq_clean == "daily":
-        scheduler.add_job(func=send_foia_email, trigger="interval", days=1, id="automated_foia_job")
+        scheduler.add_job(func=send_all_foia_requests, trigger="interval", days=1, id="automated_foia_job")
     elif freq_clean == "weekly":
-        scheduler.add_job(func=send_foia_email, trigger="interval", weeks=1, id="automated_foia_job")
+        scheduler.add_job(func=send_all_foia_requests, trigger="interval", weeks=1, id="automated_foia_job")
     elif freq_clean == "biweekly":
-        scheduler.add_job(func=send_foia_email, trigger="interval", weeks=2, id="automated_foia_job")
+        scheduler.add_job(func=send_all_foia_requests, trigger="interval", weeks=2, id="automated_foia_job")
     elif freq_clean == "monthly":
-        scheduler.add_job(func=send_foia_email, trigger="interval", days=30, id="automated_foia_job")
+        scheduler.add_job(func=send_all_foia_requests, trigger="interval", days=30, id="automated_foia_job")
         
-    print(f"Automated FOIA Schedule updated to: {freq_clean}")
+    print(f"Automated Multi-City FOIA Schedule updated to: {freq_clean}")
     return freq_clean
 
 # Initialize schedule on startup
@@ -57,42 +57,45 @@ def index():
     requests = get_all_requests()
     responses = get_all_responses()
     schedule_freq = get_setting("schedule_frequency", "off")
-    target_email = os.getenv("TARGET_EMAIL", "brcityclerk@myboca.us")
     sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
     return render_template(
         "index.html",
         requests=requests,
         responses=responses,
         schedule_freq=schedule_freq,
-        target_email=target_email,
+        municipalities=TARGET_MUNICIPALITIES,
         sender_email=sender_email
     )
 
 @app.route("/api/preview", methods=["POST", "GET"])
 def generate_preview():
-    subject, body = generate_foia_content()
-    target_email = os.getenv("TARGET_EMAIL", "brcityclerk@myboca.us")
+    drafts = []
+    for m in TARGET_MUNICIPALITIES:
+        cname = m["name"]
+        cemail = m["email"]
+        sub, bdy = generate_foia_content(city_name=cname)
+        drafts.append({
+            "city": cname,
+            "recipient": cemail,
+            "subject": sub,
+            "body": bdy
+        })
     return jsonify({
         "status": "success",
-        "subject": subject,
-        "body": body,
-        "recipient": target_email
+        "drafts": drafts
     })
 
 @app.route("/api/trigger", methods=["POST"])
 def trigger_request():
     data = request.get_json(silent=True) or {}
-    custom_subject = data.get("subject")
-    custom_body = data.get("body")
-    custom_recipient = data.get("recipient")
     
     def task():
-        send_foia_email(custom_subject=custom_subject, custom_body=custom_body, custom_recipient=custom_recipient)
+        send_all_foia_requests()
         
     thread = threading.Thread(target=task)
     thread.start()
     
-    return jsonify({"status": "success", "message": "FOIA email dispatch triggered."})
+    return jsonify({"status": "success", "message": "Multi-City FOIA email dispatch triggered for all 5 municipalities."})
 
 @app.route("/api/schedule", methods=["GET", "POST"])
 def manage_schedule():

@@ -1,4 +1,5 @@
 import os
+import time
 import smtplib
 import email
 from email.mime.text import MIMEText
@@ -12,7 +13,13 @@ import requests
 
 from database import log_request, log_response
 
-DEFAULT_TARGET_EMAIL = "brcityclerk@myboca.us"
+TARGET_MUNICIPALITIES = [
+    {"name": "City of Boca Raton", "email": "brcityclerk@myboca.us"},
+    {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com"},
+    {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net"},
+    {"name": "City of Parkland", "email": "amorales@cityofparkland.org"},
+    {"name": "Town of Hillsboro Beach", "email": "townclerk@townofhillsborobeach.com"}
+]
 
 def send_telegram_notification(message):
     from telegram_bot import get_saved_chat_id, get_bot_token
@@ -27,36 +34,36 @@ def send_telegram_notification(message):
     except Exception as e:
         print(f"Telegram notification failed: {e}")
 
-def generate_foia_content():
+def generate_foia_content(city_name="City of Boca Raton"):
     """
-    Uses Gemini API (google-genai) to generate a unique, formal Florida Chapter 119 public records request.
+    Uses Gemini API (google-genai) to generate a unique, formal Florida Chapter 119 public records request tailored to city_name.
     Returns tuple of (subject, body).
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        subject = "Public Records Request - Code Compliance & Demolition Lists (FL Ch 119)"
+        subject = f"Public Records Request - Code Compliance & Demolition Lists (FL Ch 119) - {city_name}"
         body = (
-            "Dear City Clerk,\n\n"
-            "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic copy (CSV or Excel format) "
-            "of all active code violation cases, condemned properties, and upcoming demolition lists within the City of Boca Raton. "
-            "Please explicitly include the property owner's mailing address column in the report.\n\n"
-            "Thank you for your assistance.\n\n"
-            "Sincerely,\nJorge Contreras"
+            f"Dear City Clerk of {city_name},\n\n"
+            f"Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic copy (CSV or Excel format) "
+            f"of all active code violation cases, condemned properties, and upcoming demolition lists within {city_name}. "
+            f"Please explicitly include the property owner's mailing address column in the report.\n\n"
+            f"Thank you for your assistance.\n\n"
+            f"Sincerely,\nJorge Contreras"
         )
         return subject, body
 
     try:
         client = genai.Client(api_key=api_key)
         prompt = (
-            "Generate a formal public records request email under Florida Chapter 119 (Sunshine Law) "
-            "directed to the City Clerk of Boca Raton, FL.\n"
-            "The request MUST ask for an electronic export (CSV or Excel) of:\n"
-            "1. Active code violation cases\n"
-            "2. Condemned properties\n"
-            "3. Upcoming demolition lists\n"
-            "4. Explicitly requesting the property owner's mailing address column.\n\n"
-            "Please make the wording unique, professional, and distinct while maintaining legal clarity under FL Ch. 119.\n"
-            "Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
+            f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law) "
+            f"directed specifically to the City Clerk / Records Custodian of {city_name}, Florida.\n"
+            f"The request MUST ask for an electronic export (CSV or Excel) of:\n"
+            f"1. Active code violation cases\n"
+            f"2. Condemned properties\n"
+            f"3. Upcoming demolition lists\n"
+            f"4. Explicitly requesting the property owner's mailing address column.\n\n"
+            f"Please make the wording unique, professional, and distinct while maintaining legal clarity under FL Ch. 119.\n"
+            f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
         )
         
         response = client.models.generate_content(
@@ -72,34 +79,33 @@ def generate_foia_content():
         data = json.loads(text)
         return data.get("subject"), data.get("body")
     except Exception as e:
-        print(f"Error generating content via Gemini API: {e}")
-        subject = "Florida Chapter 119 Public Records Request - Code Compliance & Condemned Properties"
+        print(f"Error generating content via Gemini API for {city_name}: {e}")
+        subject = f"Florida Chapter 119 Public Records Request - Code Compliance & Condemned Properties - {city_name}"
         body = (
-            "Dear Boca Raton City Clerk,\n\n"
-            "Under Florida Chapter 119, I am submitting a public records request for digital exports (CSV/Excel) "
-            "covering active code violations, condemned properties, and upcoming demolitions, including property owner mailing addresses.\n\n"
-            "Thank you,\nJorge Contreras"
+            f"Dear City Clerk of {city_name},\n\n"
+            f"Under Florida Chapter 119, I am submitting a public records request for digital exports (CSV/Excel) "
+            f"covering active code violations, condemned properties, and upcoming demolitions in {city_name}, including property owner mailing addresses.\n\n"
+            f"Thank you,\nJorge Contreras"
         )
         return subject, body
 
-def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None):
+def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None):
     """
-    Sends an email via SMTP. Uses custom subject/body if provided, otherwise generates via Gemini.
+    Sends an email via SMTP to a specific municipality target.
     """
     sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
     sender_password = os.getenv("SENDER_PASSWORD")
-    target_email = custom_recipient or os.getenv("TARGET_EMAIL", DEFAULT_TARGET_EMAIL)
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     
     if not sender_email or not sender_password:
         msg = "SMTP Credentials not configured (SENDER_EMAIL or SENDER_PASSWORD missing)."
-        log_request("Failed", "Email Request", target_email, "N/A", msg)
-        return {"status": "error", "message": msg}
+        log_request("Failed", "Email Request", target_email, "N/A", msg, city_name=city_name)
+        return {"status": "error", "message": msg, "city": city_name}
 
     if custom_subject and custom_body:
         subject, body = custom_subject, custom_body
     else:
-        subject, body = generate_foia_content()
+        subject, body = generate_foia_content(city_name=city_name)
     
     try:
         msg = MIMEMultipart()
@@ -113,27 +119,66 @@ def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None
             server.sendmail(sender_email, target_email, msg.as_string())
             
         body_preview = body[:150] + "..." if len(body) > 150 else body
-        log_request("Sent", "Email Request", target_email, subject, body_preview)
+        log_request("Sent", "Email Request", target_email, subject, body_preview, city_name=city_name)
         
-        # Send Telegram Alert
-        send_telegram_notification(f"✅ <b>FOIA Request Sent</b>\nTo: {target_email}\nSubject: {subject}")
+        # Send Telegram Alert per city
+        send_telegram_notification(f"✅ <b>FOIA Request Sent</b>\nCity: <b>{city_name}</b>\nTo: {target_email}\nSubject: {subject}")
         
-        return {"status": "success", "subject": subject, "recipient": target_email}
+        return {"status": "success", "city": city_name, "subject": subject, "recipient": target_email}
         
     except Exception as e:
         error_msg = str(e)
-        print(f"SMTP Error: {traceback.format_exc()}")
-        log_request("Failed", "Email Request", target_email, subject, f"Error: {error_msg}")
-        return {"status": "error", "message": error_msg}
+        print(f"SMTP Error for {city_name}: {traceback.format_exc()}")
+        log_request("Failed", "Email Request", target_email, subject, f"Error: {error_msg}", city_name=city_name)
+        return {"status": "error", "city": city_name, "message": error_msg}
+
+def send_all_foia_requests(custom_drafts=None):
+    """
+    Iterates through all target municipalities and sends requests with 6-second rate limiting delays.
+    """
+    results = []
+    total = len(TARGET_MUNICIPALITIES)
+    
+    print(f"Starting batch dispatch across {total} municipalities...")
+    
+    for idx, target in enumerate(TARGET_MUNICIPALITIES):
+        city = target["name"]
+        email_addr = target["email"]
+        
+        custom_sub = None
+        custom_bdy = None
+        if custom_drafts and city in custom_drafts:
+            custom_sub = custom_drafts[city].get("subject")
+            custom_bdy = custom_drafts[city].get("body")
+            
+        res = send_single_foia_email(city, email_addr, custom_subject=custom_sub, custom_body=custom_bdy)
+        results.append(res)
+        
+        # Rate limit delay (6s) between dispatches to avoid spam filters
+        if idx < total - 1:
+            time.sleep(6)
+            
+    sent_count = sum(1 for r in results if r.get("status") == "success")
+    
+    # Telegram summary alert
+    send_telegram_notification(f"🚀 <b>Multi-City FOIA Dispatch Complete!</b>\nDispatched to <b>{sent_count}/{total}</b> municipalities.")
+    
+    return {"status": "success", "dispatched": sent_count, "total": total, "results": results}
+
+# Backwards compatibility wrapper
+def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None):
+    return send_all_foia_requests()
 
 def check_inbox():
     """
-    Connects via IMAP to check recent messages for responses or CSV/Excel attachments.
+    Connects via IMAP to check recent messages for responses or CSV/Excel attachments from any target municipality.
     """
     imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
     email_user = os.getenv("SENDER_EMAIL")
     email_pass = os.getenv("SENDER_PASSWORD")
-    target_email = os.getenv("TARGET_EMAIL", DEFAULT_TARGET_EMAIL)
+    
+    target_domains = ["myboca.us", "mydelraybeach.com", "coconutcreek.net", "cityofparkland.org", "townofhillsborobeach.com"]
+    target_emails = [t["email"].lower() for t in TARGET_MUNICIPALITIES]
     
     if not email_user or not email_pass:
         return {"status": "error", "message": "IMAP credentials not configured"}
@@ -143,9 +188,8 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            # Search recent 20 messages in INBOX
             messages = server.search(['ALL'])
-            recent_uids = messages[-20:] if len(messages) > 20 else messages
+            recent_uids = messages[-25:] if len(messages) > 25 else messages
             
             logs = []
             for uid in reversed(recent_uids):
@@ -162,7 +206,7 @@ def check_inbox():
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
                     
-                sender = email_message.get("From", "")
+                sender = email_message.get("From", "").lower()
                 
                 has_attachment = False
                 attachment_name = ""
@@ -178,8 +222,8 @@ def check_inbox():
                             has_attachment = True
                             attachment_name = filename
                 
-                # Check relevance: sender matches target OR has attachment OR contains FOIA/Boca keywords
-                is_target_sender = target_email.lower() in sender.lower() or "boca" in sender.lower()
+                # Match sender against target emails/domains
+                is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
                 is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
                 
                 if is_target_sender or has_attachment or is_foia_related:
