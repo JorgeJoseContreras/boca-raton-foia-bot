@@ -36,20 +36,30 @@ def send_telegram_notification(message):
 
 def generate_foia_content(city_name="City of Boca Raton"):
     """
-    Uses Gemini API (google-genai) to generate a unique, formal Florida Chapter 119 public records request tailored to city_name.
-    Returns tuple of (subject, body).
+    Generates FOIA request content. If use_gemini_ai is enabled, calls Gemini API.
+    Otherwise, uses custom template from database settings.
     """
+    from database import get_setting
+    
+    use_ai = get_setting("use_gemini_ai", "true")
+    custom_template = get_setting("foia_template")
+    
+    if use_ai == "false" and custom_template:
+        subject = f"Public Records Request - Code Compliance & Demolition Lists (FL Ch 119) - {city_name}"
+        body = custom_template.replace("City of Boca Raton", city_name)
+        return subject, body
+
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         subject = f"Public Records Request - Code Compliance & Demolition Lists (FL Ch 119) - {city_name}"
-        body = (
+        body = (custom_template or (
             f"Dear City Clerk of {city_name},\n\n"
             f"Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic copy (CSV or Excel format) "
             f"of all active code violation cases, condemned properties, and upcoming demolition lists within {city_name}. "
             f"Please explicitly include the property owner's mailing address column in the report.\n\n"
             f"Thank you for your assistance.\n\n"
             f"Sincerely,\nJorge Contreras"
-        )
+        )).replace("City of Boca Raton", city_name)
         return subject, body
 
     try:

@@ -3,6 +3,14 @@ import os
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "foia.db")
 
+DEFAULT_TEMPLATE = (
+    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic export (CSV or Excel format) "
+    "of all active code violation cases, condemned properties, and upcoming demolition lists. "
+    "Please explicitly include the property owner's mailing address column in the report.\n\n"
+    "Thank you for your assistance.\n\n"
+    "Sincerely,\nJorge Contreras"
+)
+
 def get_connection():
     return sqlite3.connect(DATABASE_PATH)
 
@@ -24,7 +32,6 @@ def init_db():
         )
     ''')
     
-    # Try adding city_name column if table existed previously without it
     try:
         cursor.execute("ALTER TABLE requests ADD COLUMN city_name TEXT")
     except sqlite3.OperationalError:
@@ -44,7 +51,7 @@ def init_db():
         )
     ''')
     
-    # Table for storing key-value settings (e.g. schedule frequency)
+    # Table for storing key-value settings
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -52,6 +59,21 @@ def init_db():
         )
     ''')
     
+    conn.commit()
+    
+    # Seed default settings if missing
+    defaults = {
+        "foia_template": DEFAULT_TEMPLATE,
+        "start_date_days_ago": "30",
+        "delray_dept": "Code Enforcement",
+        "delray_record_type": "Code Violations",
+        "use_gemini_ai": "true",
+        "schedule_frequency": "off"
+    }
+    
+    for key, val in defaults.items():
+        cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, val))
+        
     conn.commit()
     conn.close()
 

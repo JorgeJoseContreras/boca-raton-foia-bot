@@ -78,6 +78,19 @@ def index():
         sender_email=sender_email
     )
 
+@app.route("/settings")
+def settings_page():
+    all_keys = ["use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency"]
+    settings = {k: get_setting(k, "") for k in all_keys}
+    return render_template("settings.html", settings=settings)
+
+@app.route("/api/settings", methods=["POST"])
+def save_settings_route():
+    data = request.get_json(silent=True) or {}
+    for key, val in data.items():
+        set_setting(key, val)
+    return jsonify({"status": "success", "message": "Settings saved successfully."})
+
 @app.route("/api/preview", methods=["POST", "GET"])
 def generate_preview():
     drafts = []
