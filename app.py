@@ -7,6 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses
 from email_engine import send_foia_email, check_inbox, generate_foia_content
+from telegram_bot import start_bot_thread
 
 load_dotenv()
 
@@ -14,6 +15,9 @@ app = Flask(__name__)
 
 # Initialize DB
 init_db()
+
+# Start Telegram Bot Polling thread
+start_bot_thread()
 
 # Setup background scheduler for checking inbox every 10 minutes
 scheduler = BackgroundScheduler()

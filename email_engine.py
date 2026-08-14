@@ -15,8 +15,9 @@ from database import log_request, log_response
 DEFAULT_TARGET_EMAIL = "brcityclerk@myboca.us"
 
 def send_telegram_notification(message):
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    from telegram_bot import get_saved_chat_id, get_bot_token
+    token = get_bot_token()
+    chat_id = get_saved_chat_id()
     if not token or not chat_id:
         return
     try:
