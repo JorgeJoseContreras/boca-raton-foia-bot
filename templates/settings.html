@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Application Settings - FOIA Automation Manager</title>
+    <title>Code Enforcement Automation - Settings</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -118,6 +118,15 @@
             cursor: pointer;
         }
 
+        footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e4e8;
+            font-size: 13px;
+            color: #666666;
+            text-align: center;
+        }
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -134,9 +143,17 @@
 </head>
 <body>
     <div class="container">
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2b5797;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
         <header>
             <div>
-                <h1>Application and Automation Settings</h1>
+                <h1>Code Enforcement Automation - Settings</h1>
                 <div style="font-size: 13px; color: #666; margin-top: 4px;">Fine-tune FOIA templates, date offsets, and portal defaults.</div>
             </div>
             <div class="btn-group">
@@ -147,7 +164,7 @@
 
         <!-- FOIA Template & AI Settings -->
         <div class="card">
-            <div class="card-title">1. FOIA Request Content and AI Settings</div>
+            <div class="card-title">FOIA Request Content and AI Settings</div>
             
             <div class="form-group">
                 <label>Dynamic AI Rephrasing Mode</label>
@@ -171,7 +188,7 @@
 
         <!-- Date Range Settings -->
         <div class="card">
-            <div class="card-title">2. Date Range Preference</div>
+            <div class="card-title">Date Range Preference</div>
             <div class="form-group">
                 <label for="startDateOffset">Default Start Date Offset</label>
                 <select id="startDateOffset">
@@ -186,7 +203,7 @@
 
         <!-- Delray Beach GovQA Defaults -->
         <div class="card">
-            <div class="card-title">3. Delray Beach GovQA Portal Defaults</div>
+            <div class="card-title">Delray Beach GovQA Portal Defaults</div>
             
             <div class="form-group">
                 <label for="delrayDept">Department Requesting Record(s) From</label>
@@ -216,6 +233,10 @@
                 </select>
             </div>
         </div>
+
+        <footer>
+            Created by Jorge Contreras
+        </footer>
     </div>
 
     <div class="toast" id="toast">Notification</div>

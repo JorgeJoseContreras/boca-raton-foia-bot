@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-City Public Records Request Manager</title>
+    <title>Code Enforcement Automation</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
@@ -30,18 +30,21 @@
             border-bottom: 2px solid #2b5797;
             padding-bottom: 15px;
             margin-bottom: 20px;
+            gap: 20px;
         }
 
         h1 {
             margin: 0;
             font-size: 24px;
             color: #2b5797;
+            white-space: nowrap;
         }
 
         .meta-info {
             font-size: 13px;
             color: #666666;
             margin-top: 5px;
+            white-space: nowrap;
         }
 
         .directory-container {
@@ -109,6 +112,7 @@
             border-radius: 4px;
             cursor: pointer;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn:hover {
@@ -345,13 +349,12 @@
     <div class="container">
         <header>
             <div>
-                <h1>Multi-City Public Records Request Manager</h1>
+                <h1>Code Enforcement Automation</h1>
                 <div class="meta-info">Florida Chapter 119 Public Records Law | Sender: <strong>{{ sender_email }}</strong></div>
             </div>
             <div class="btn-group">
-                <a href="/settings" class="btn btn-outline" style="padding: 8px 14px; font-size: 13px; text-decoration: none;">Settings</a>
                 <div style="display: flex; align-items: center; gap: 5px;">
-                    <label for="schedSelect" style="font-size: 12px; font-weight: bold; color: #444;">Automated Schedule:</label>
+                    <label for="schedSelect" style="font-size: 12px; font-weight: bold; color: #444; white-space: nowrap;">Automated Schedule:</label>
                     <select id="schedSelect" onchange="updateSchedule(this.value)" style="padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; background: white;">
                         <option value="off" {% if schedule_freq == 'off' %}selected{% endif %}>Off (Manual Only)</option>
                         <option value="daily" {% if schedule_freq == 'daily' %}selected{% endif %}>Daily (Every 24h)</option>
@@ -428,7 +431,7 @@
         <p style="color: #777; font-style: italic;">No public records requests have been dispatched yet.</p>
         {% endif %}
 
-        <div class="section-title">Inbox Response Feed (All Municipalities)</div>
+        <div class="section-title">Inbox Response Feed</div>
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
@@ -449,9 +452,14 @@
         </div>
 
         <footer>
-            <a href="https://bocaratonfl.justfoia.com/Forms/Launch/a30f7991-2d31-4550-baf7-888e0928ae17" target="_blank" rel="noopener">
-                Launch Boca Raton JustFOIA Web Portal
-            </a>
+            <div style="margin-bottom: 10px;">
+                <a href="/settings" style="font-weight: bold;">Application Settings</a>
+            </div>
+            <div>
+                <a href="https://bocaratonfl.justfoia.com/Forms/Launch/a30f7991-2d31-4550-baf7-888e0928ae17" target="_blank" rel="noopener">
+                    Launch Boca Raton JustFOIA Web Portal
+                </a>
+            </div>
         </footer>
     </div>
 
