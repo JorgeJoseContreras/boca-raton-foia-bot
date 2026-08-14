@@ -6,8 +6,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses
-from automation import run_foia_request
-from email_handler import check_inbox
+from email_engine import send_foia_email, check_inbox
 
 load_dotenv()
 
@@ -21,7 +20,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(func=check_inbox, trigger="interval", minutes=10)
 scheduler.start()
 
-# Shut down the scheduler when exiting the app
+# Shut down scheduler gracefully
 atexit.register(lambda: scheduler.shutdown())
 
 
@@ -29,18 +28,19 @@ atexit.register(lambda: scheduler.shutdown())
 def index():
     requests = get_all_requests()
     responses = get_all_responses()
-    return render_template("index.html", requests=requests, responses=responses)
+    target_email = os.getenv("TARGET_EMAIL", "brcityclerk@myboca.us")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    return render_template("index.html", requests=requests, responses=responses, target_email=target_email, sender_email=sender_email)
 
 @app.route("/api/trigger", methods=["POST"])
 def trigger_request():
-    # Run the automation in a separate thread so we don't block the UI
     def task():
-        run_foia_request()
+        send_foia_email()
         
     thread = threading.Thread(target=task)
     thread.start()
     
-    return jsonify({"status": "success", "message": "Automation triggered in background."})
+    return jsonify({"status": "success", "message": "Gemini FOIA Email generation & dispatch triggered."})
 
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():

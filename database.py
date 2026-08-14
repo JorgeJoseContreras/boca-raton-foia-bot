@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from datetime import datetime
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "foia.db")
 
@@ -11,7 +10,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Table for tracking FOIA requests sent
+    # Table for tracking FOIA email requests sent
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,7 +18,8 @@ def init_db():
             status TEXT,
             record_type TEXT,
             recipient_email TEXT,
-            description TEXT
+            subject TEXT,
+            body_preview TEXT
         )
     ''')
     
@@ -40,13 +40,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-def log_request(status, record_type, recipient_email, description):
+def log_request(status, record_type, recipient_email, subject, body_preview):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO requests (status, record_type, recipient_email, description)
-        VALUES (?, ?, ?, ?)
-    ''', (status, record_type, recipient_email, description))
+        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (status, record_type, recipient_email, subject, body_preview))
     conn.commit()
     req_id = cursor.lastrowid
     conn.close()
