@@ -73,6 +73,16 @@
             background-color: #5a6268;
         }
 
+        .btn-outline {
+            background-color: transparent;
+            color: #2b5797;
+            border: 1px solid #2b5797;
+        }
+
+        .btn-outline:hover {
+            background-color: #f0f4f9;
+        }
+
         .section-title {
             font-size: 18px;
             font-weight: bold;
@@ -187,6 +197,69 @@
             text-decoration: underline;
         }
 
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 650px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2b5797;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #444;
+        }
+
+        .form-group input[type="text"], .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
         .toast {
             position: fixed;
             bottom: 20px;
@@ -197,7 +270,7 @@
             border-radius: 4px;
             font-size: 14px;
             display: none;
-            z-index: 1000;
+            z-index: 3000;
         }
     </style>
 </head>
@@ -211,7 +284,7 @@
             </div>
             <div class="btn-group">
                 <button class="btn btn-secondary" onclick="checkInbox()">Check Inbox Now</button>
-                <button class="btn" onclick="sendRequest()">Send Request Now (Gemini AI)</button>
+                <button class="btn" onclick="openPreviewModal()">Send Request Now</button>
             </div>
         </header>
 
@@ -266,11 +339,40 @@
         </div>
 
         <footer>
-            Boca Raton Public Records Portal Official Form: 
             <a href="https://bocaratonfl.justfoia.com/Forms/Launch/a30f7991-2d31-4550-baf7-888e0928ae17" target="_blank" rel="noopener">
                 Launch Boca Raton JustFOIA Web Portal
             </a>
         </footer>
+    </div>
+
+    <!-- Preview & Edit Modal -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">Review & Edit Public Records Request Email</div>
+            
+            <div class="form-group">
+                <label for="modalRecipient">Recipient Email</label>
+                <input type="text" id="modalRecipient" value="{{ target_email }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="modalSubject">Subject Line</label>
+                <input type="text" id="modalSubject" placeholder="Generating AI Subject line...">
+            </div>
+
+            <div class="form-group">
+                <label for="modalBody">Email Body Text</label>
+                <textarea id="modalBody" rows="10" placeholder="Generating AI Email body..."></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="loadPreview()">🔄 Re-generate AI Draft</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button class="btn" onclick="sendCustomEmail()">Send Email Now</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="toast" id="toast">Notification</div>
@@ -283,15 +385,57 @@
             setTimeout(() => t.style.display = 'none', 3000);
         }
 
-        async function sendRequest() {
-            showToast("Generating request with Gemini AI & sending email...");
+        function closeModal() {
+            document.getElementById('previewModal').style.display = 'none';
+        }
+
+        async function openPreviewModal() {
+            document.getElementById('previewModal').style.display = 'flex';
+            await loadPreview();
+        }
+
+        async function loadPreview() {
+            showToast("Generating AI draft with Gemini...");
+            document.getElementById('modalSubject').value = "Generating...";
+            document.getElementById('modalBody').value = "Generating AI content, please wait...";
+            
             try {
-                const res = await fetch('/api/trigger', { method: 'POST' });
+                const res = await fetch('/api/preview', { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('modalSubject').value = data.subject;
+                document.getElementById('modalBody').value = data.body;
+                if (data.recipient) {
+                    document.getElementById('modalRecipient').value = data.recipient;
+                }
+            } catch (err) {
+                showToast("Error generating preview.");
+            }
+        }
+
+        async function sendCustomEmail() {
+            const subject = document.getElementById('modalSubject').value;
+            const body = document.getElementById('modalBody').value;
+            const recipient = document.getElementById('modalRecipient').value;
+
+            if (!subject || !body) {
+                alert("Subject and Body cannot be empty!");
+                return;
+            }
+
+            closeModal();
+            showToast("Sending email...");
+
+            try {
+                const res = await fetch('/api/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject, body, recipient })
+                });
                 const data = await res.json();
                 showToast(data.message);
                 setTimeout(() => location.reload(), 2500);
             } catch (err) {
-                showToast("Error sending request.");
+                showToast("Error sending email.");
             }
         }
 

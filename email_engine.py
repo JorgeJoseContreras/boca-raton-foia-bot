@@ -20,7 +20,6 @@ def generate_foia_content():
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print("GEMINI_API_KEY missing, using fallback template.")
         subject = "Public Records Request - Code Compliance & Demolition Lists (FL Ch 119)"
         body = (
             "Dear City Clerk,\n\n"
@@ -52,7 +51,6 @@ def generate_foia_content():
         )
         
         text = response.text.strip()
-        # Clean markdown code blocks if present
         if text.startswith("```"):
             lines = text.splitlines()
             text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
@@ -70,13 +68,13 @@ def generate_foia_content():
         )
         return subject, body
 
-def send_foia_email():
+def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None):
     """
-    Generates a unique request via Gemini and sends it via SMTP to TARGET_EMAIL.
+    Sends an email via SMTP. Uses custom subject/body if provided, otherwise generates via Gemini.
     """
     sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
     sender_password = os.getenv("SENDER_PASSWORD")
-    target_email = os.getenv("TARGET_EMAIL", DEFAULT_TARGET_EMAIL)
+    target_email = custom_recipient or os.getenv("TARGET_EMAIL", DEFAULT_TARGET_EMAIL)
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     
     if not sender_email or not sender_password:
@@ -84,7 +82,10 @@ def send_foia_email():
         log_request("Failed", "Email Request", target_email, "N/A", msg)
         return {"status": "error", "message": msg}
 
-    subject, body = generate_foia_content()
+    if custom_subject and custom_body:
+        subject, body = custom_subject, custom_body
+    else:
+        subject, body = generate_foia_content()
     
     try:
         msg = MIMEMultipart()
@@ -93,7 +94,6 @@ def send_foia_email():
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
         
-        # Connect to Gmail SMTP Port 465 (SSL)
         with smtplib.SMTP_SSL(smtp_server, 465) as server:
             server.login(sender_email, sender_password)
             server.sendmail(sender_email, target_email, msg.as_string())
@@ -110,7 +110,7 @@ def send_foia_email():
 
 def check_inbox():
     """
-    Connects via IMAP to check for replies from TARGET_EMAIL or incoming CSV/Excel attachments.
+    Connects via IMAP to check recent messages for responses or CSV/Excel attachments.
     """
     imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
     email_user = os.getenv("SENDER_EMAIL")
@@ -125,22 +125,27 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            # Search for unseen messages
-            messages = server.search(['UNSEEN'])
+            # Search recent 20 messages in INBOX
+            messages = server.search(['ALL'])
+            recent_uids = messages[-20:] if len(messages) > 20 else messages
             
             logs = []
-            for uid, message_data in server.fetch(messages, 'RFC822').items():
+            for uid in reversed(recent_uids):
+                fetch_data = server.fetch([uid], 'RFC822')
+                if not fetch_data or uid not in fetch_data:
+                    continue
+                    
+                message_data = fetch_data[uid]
                 email_message = email.message_from_bytes(message_data[b'RFC822'])
                 
                 subject_header = email_message.get("Subject", "No Subject")
                 decoded_list = decode_header(subject_header)
                 subject, encoding = decoded_list[0]
                 if isinstance(subject, bytes):
-                    subject = subject.decode(encoding if encoding else "utf-8")
+                    subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
                     
                 sender = email_message.get("From", "")
                 
-                # Check attachments
                 has_attachment = False
                 attachment_name = ""
                 
@@ -155,19 +160,16 @@ def check_inbox():
                             has_attachment = True
                             attachment_name = filename
                 
-                log_response(subject, sender, has_attachment, attachment_name)
-                logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
+                # Check relevance: sender matches target OR has attachment OR contains FOIA/Boca keywords
+                is_target_sender = target_email.lower() in sender.lower() or "boca" in sender.lower()
+                is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
+                
+                if is_target_sender or has_attachment or is_foia_related:
+                    log_response(subject, sender, has_attachment, attachment_name)
+                    logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                 
         return {"status": "success", "count": len(logs), "logs": logs}
         
     except Exception as e:
         print(f"IMAP Error: {e}")
         return {"status": "error", "message": str(e)}
-
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    print("Testing content generation...")
-    sub, bdy = generate_foia_content()
-    print("Subject:", sub)
-    print("Body:\n", bdy)
