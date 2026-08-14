@@ -132,7 +132,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
         log_request("Sent", "Email Request", target_email, subject, body_preview, city_name=city_name)
         
         # Send Telegram Alert per city
-        send_telegram_notification(f"✅ <b>FOIA Request Sent</b>\nCity: <b>{city_name}</b>\nTo: {target_email}\nSubject: {subject}")
+        send_telegram_notification(f"<b>FOIA Request Sent</b>\nCity: <b>{city_name}</b>\nTo: {target_email}\nSubject: {subject}")
         
         return {"status": "success", "city": city_name, "subject": subject, "recipient": target_email}
         
@@ -171,7 +171,7 @@ def send_all_foia_requests(custom_drafts=None):
     sent_count = sum(1 for r in results if r.get("status") == "success")
     
     # Telegram summary alert
-    send_telegram_notification(f"🚀 <b>Multi-City FOIA Dispatch Complete!</b>\nDispatched to <b>{sent_count}/{total}</b> municipalities.")
+    send_telegram_notification(f"<b>Multi-City FOIA Dispatch Complete</b>\nDispatched to <b>{sent_count}/{total}</b> municipalities.")
     
     return {"status": "success", "dispatched": sent_count, "total": total, "results": results}
 
@@ -241,8 +241,8 @@ def check_inbox():
                     logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                     
                     # Notify via Telegram
-                    attach_msg = f"\n📎 Attachment: {attachment_name}" if has_attachment else ""
-                    send_telegram_notification(f"📬 <b>New Inbox Activity Detected!</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
+                    attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
+                    send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
                 
         return {"status": "success", "count": len(logs), "logs": logs}
         

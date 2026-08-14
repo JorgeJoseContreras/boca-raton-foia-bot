@@ -96,7 +96,7 @@
             color: #444;
         }
 
-        .form-group text, .form-group select, .form-group textarea, .form-group input[type="text"] {
+        .form-group select, .form-group textarea, .form-group input[type="text"] {
             width: 100%;
             padding: 8px 10px;
             border: 1px solid #ccc;
@@ -136,18 +136,18 @@
     <div class="container">
         <header>
             <div>
-                <h1>⚙️ Application & Automation Settings</h1>
-                <div style="font-size: 13px; color: #666; margin-top: 4px;">Fine-tune your FOIA templates, date offsets, and portal defaults.</div>
+                <h1>Application and Automation Settings</h1>
+                <div style="font-size: 13px; color: #666; margin-top: 4px;">Fine-tune FOIA templates, date offsets, and portal defaults.</div>
             </div>
             <div class="btn-group">
-                <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+                <a href="/" class="btn btn-secondary">Back to Dashboard</a>
                 <button class="btn" onclick="saveSettings()">Save All Settings</button>
             </div>
         </header>
 
         <!-- FOIA Template & AI Settings -->
         <div class="card">
-            <div class="card-title">1. FOIA Request Content & AI Settings</div>
+            <div class="card-title">1. FOIA Request Content and AI Settings</div>
             
             <div class="form-group">
                 <label>Dynamic AI Rephrasing Mode</label>
@@ -173,7 +173,7 @@
         <div class="card">
             <div class="card-title">2. Date Range Preference</div>
             <div class="form-group">
-                <label for="startDateOffset">Default Start Date Offset (For Portals & Filters)</label>
+                <label for="startDateOffset">Default Start Date Offset</label>
                 <select id="startDateOffset">
                     <option value="30" {% if settings.start_date_days_ago == '30' %}selected{% endif %}>Last 30 Days</option>
                     <option value="60" {% if settings.start_date_days_ago == '60' %}selected{% endif %}>Last 60 Days</option>
@@ -187,14 +187,33 @@
         <!-- Delray Beach GovQA Defaults -->
         <div class="card">
             <div class="card-title">3. Delray Beach GovQA Portal Defaults</div>
+            
             <div class="form-group">
                 <label for="delrayDept">Department Requesting Record(s) From</label>
-                <input type="text" id="delrayDept" value="{{ settings.delray_dept }}">
+                <select id="delrayDept">
+                    <option value="Code Enforcement" {% if settings.delray_dept == 'Code Enforcement' or not settings.delray_dept %}selected{% endif %}>Code Enforcement</option>
+                    <option value="Building Department" {% if settings.delray_dept == 'Building Department' %}selected{% endif %}>Building Department</option>
+                    <option value="Business Tax" {% if settings.delray_dept == 'Business Tax' %}selected{% endif %}>Business Tax</option>
+                    <option value="City Attorney" {% if settings.delray_dept == 'City Attorney' %}selected{% endif %}>City Attorney</option>
+                    <option value="City Clerk" {% if settings.delray_dept == 'City Clerk' %}selected{% endif %}>City Clerk</option>
+                    <option value="City Manager's Office" {% if settings.delray_dept == "City Manager's Office" %}selected{% endif %}>City Manager's Office</option>
+                    <option value="Community Improvement" {% if settings.delray_dept == 'Community Improvement' %}selected{% endif %}>Community Improvement</option>
+                    <option value="Development Services/Planning & Zoning" {% if settings.delray_dept == 'Development Services/Planning & Zoning' %}selected{% endif %}>Development Services/Planning & Zoning</option>
+                    <option value="Finance" {% if settings.delray_dept == 'Finance' %}selected{% endif %}>Finance</option>
+                    <option value="Fire" {% if settings.delray_dept == 'Fire' %}selected{% endif %}>Fire</option>
+                    <option value="Human Resources" {% if settings.delray_dept == 'Human Resources' %}selected{% endif %}>Human Resources</option>
+                    <option value="Parks and Recreation" {% if settings.delray_dept == 'Parks and Recreation' %}selected{% endif %}>Parks and Recreation</option>
+                </select>
             </div>
 
             <div class="form-group">
                 <label for="delrayRecordType">Type of Record(s) Requested</label>
-                <input type="text" id="delrayRecordType" value="{{ settings.delray_record_type }}">
+                <select id="delrayRecordType">
+                    <option value="Code Violations" {% if settings.delray_record_type == 'Code Violations' or not settings.delray_record_type %}selected{% endif %}>Code Violations</option>
+                    <option value="Abandoned Properties" {% if settings.delray_record_type == 'Abandoned Properties' %}selected{% endif %}>Abandoned Properties</option>
+                    <option value="Code Enforcement Cases" {% if settings.delray_record_type == 'Code Enforcement Cases' %}selected{% endif %}>Code Enforcement Cases</option>
+                    <option value="Other (Code Enforcement)" {% if settings.delray_record_type == 'Other (Code Enforcement)' %}selected{% endif %}>Other (Code Enforcement)</option>
+                </select>
             </div>
         </div>
     </div>
@@ -231,7 +250,7 @@
                     })
                 });
                 const data = await res.json();
-                showToast("Settings saved successfully!");
+                showToast("Settings saved successfully.");
             } catch (err) {
                 showToast("Error saving settings.");
             }

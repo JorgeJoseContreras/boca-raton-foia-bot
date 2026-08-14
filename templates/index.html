@@ -349,7 +349,7 @@
                 <div class="meta-info">Florida Chapter 119 Public Records Law | Sender: <strong>{{ sender_email }}</strong></div>
             </div>
             <div class="btn-group">
-                <a href="/settings" class="btn btn-outline" style="padding: 8px 14px; font-size: 13px; text-decoration: none;">⚙️ Settings</a>
+                <a href="/settings" class="btn btn-outline" style="padding: 8px 14px; font-size: 13px; text-decoration: none;">Settings</a>
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <label for="schedSelect" style="font-size: 12px; font-weight: bold; color: #444;">Automated Schedule:</label>
                     <select id="schedSelect" onchange="updateSchedule(this.value)" style="padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; background: white;">
@@ -367,7 +367,7 @@
 
         <!-- Automated Schedule Status Banner -->
         <div class="schedule-banner" id="schedBanner" style="{% if schedule_freq == 'off' %}display: none;{% endif %}">
-            <span>⏱️ <strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 5 municipalities.</span>
+            <span><strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 5 municipalities.</span>
             <span id="nextRunSpan">Next Scheduled Send: <strong>{{ next_run_time or 'Calculating...' }}</strong></span>
         </div>
 
@@ -439,7 +439,7 @@
                     </div>
                     <div class="feed-subject">{{ resp.subject }}</div>
                     {% if resp.has_attachment %}
-                    <div class="attachment">📎 Attachment: {{ resp.attachment_name }}</div>
+                    <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -458,7 +458,7 @@
     <!-- Multi-City Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-content">
-            <div class="modal-header">Review & Edit Multi-City FOIA Requests (5 Municipalities)</div>
+            <div class="modal-header">Review and Edit Multi-City FOIA Requests (5 Municipalities)</div>
             
             <div id="draftsContainer">
                 <p style="color: #666; font-style: italic;">Generating AI drafts for all 5 municipalities...</p>
@@ -507,7 +507,7 @@
                     data.drafts.forEach((d, idx) => {
                         html += `
                             <div class="draft-card" data-city="${d.city}">
-                                <div class="draft-card-header">🏛️ ${d.city} (${d.recipient})</div>
+                                <div class="draft-card-header">${d.city} (${d.recipient})</div>
                                 <div class="form-group">
                                     <label>Subject Line</label>
                                     <input type="text" class="edit-subject" value="${d.subject.replace(/"/g, '&quot;')}">

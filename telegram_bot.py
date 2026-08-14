@@ -61,8 +61,8 @@ def get_bottom_keyboard():
     """Returns bottom persistent reply keyboard"""
     return {
         "keyboard": [
-            [{"text": "🚀 Send All FOIA Requests"}, {"text": "📬 Check Inbox"}],
-            [{"text": "⚙️ Automation Schedule"}]
+            [{"text": "Send All FOIA Requests"}, {"text": "Check Inbox"}],
+            [{"text": "Automation Schedule"}]
         ],
         "resize_keyboard": True,
         "is_persistent": True
@@ -73,11 +73,11 @@ def get_preview_inline_keyboard():
     return {
         "inline_keyboard": [
             [
-                {"text": "✅ Approve & Send All (5 Cities)", "callback_data": "approve_send_all"},
+                {"text": "Approve and Send All (5 Cities)", "callback_data": "approve_send_all"},
                 {"text": "Regenerate All", "callback_data": "regenerate_all"}
             ],
             [
-                {"text": "❌ Cancel", "callback_data": "cancel_draft"}
+                {"text": "Cancel", "callback_data": "cancel_draft"}
             ]
         ]
     }
@@ -87,15 +87,15 @@ def get_schedule_inline_keyboard():
     return {
         "inline_keyboard": [
             [
-                {"text": "🟢 Daily", "callback_data": "sched_daily"},
-                {"text": "🔵 Weekly", "callback_data": "sched_weekly"}
+                {"text": "Daily", "callback_data": "sched_daily"},
+                {"text": "Weekly", "callback_data": "sched_weekly"}
             ],
             [
-                {"text": "🟣 Bi-weekly", "callback_data": "sched_biweekly"},
-                {"text": "🔴 Monthly", "callback_data": "sched_monthly"}
+                {"text": "Bi-weekly", "callback_data": "sched_biweekly"},
+                {"text": "Monthly", "callback_data": "sched_monthly"}
             ],
             [
-                {"text": "⚪ Turn Off (Manual Only)", "callback_data": "sched_off"}
+                {"text": "Turn Off (Manual Only)", "callback_data": "sched_off"}
             ]
         ]
     }
@@ -116,7 +116,7 @@ def handle_generate_and_preview_all(chat_id, edit_message_id=None):
     PENDING_DRAFTS[chat_id] = drafts
     
     preview_txt = (
-        f"📝 <b>Multi-City FOIA Requests Drafted ({len(TARGET_MUNICIPALITIES)} Municipalities)</b>\n\n"
+        f"<b>Multi-City FOIA Requests Drafted ({len(TARGET_MUNICIPALITIES)} Municipalities)</b>\n\n"
         + "\n\n".join(preview_items) +
         f"\n\n<i>Tap Approve to dispatch all {len(TARGET_MUNICIPALITIES)} emails via SMTP with 6s rate limiting.</i>"
     )
@@ -159,28 +159,28 @@ def run_telegram_bot_polling():
                             save_chat_id(chat_id)
                             text = msg.get("text", "").strip()
                             
-                            if text in ["🚀 Send All FOIA Requests", "🚀 Send FOIA Request"]:
-                                send_telegram_msg(chat_id, "⏳ <b>Generating Gemini AI email drafts for all 5 municipalities...</b>", get_bottom_keyboard())
+                            if text in ["Send All FOIA Requests", "🚀 Send All FOIA Requests", "🚀 Send FOIA Request"]:
+                                send_telegram_msg(chat_id, "<b>Generating email drafts for all 5 municipalities...</b>", get_bottom_keyboard())
                                 handle_generate_and_preview_all(chat_id)
-                            elif text == "📬 Check Inbox":
-                                send_telegram_msg(chat_id, "🔍 <b>Checking IMAP Inbox for responses...</b>", get_bottom_keyboard())
+                            elif text in ["Check Inbox", "📬 Check Inbox"]:
+                                send_telegram_msg(chat_id, "<b>Checking IMAP Inbox for responses...</b>", get_bottom_keyboard())
                                 res = check_inbox()
                                 count = res.get("count", 0)
                                 send_telegram_msg(
                                     chat_id,
-                                    f"📬 <b>Inbox Check Complete!</b> Found <b>{count}</b> relevant item(s).",
+                                    f"<b>Inbox Check Complete!</b> Found <b>{count}</b> relevant item(s).",
                                     get_bottom_keyboard()
                                 )
-                            elif text == "⚙️ Automation Schedule":
+                            elif text in ["Automation Schedule", "⚙️ Automation Schedule"]:
                                 curr_freq = get_setting("schedule_frequency", "off").capitalize()
                                 next_run = get_next_run_time()
-                                next_str = f"\n⏱️ <b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and curr_freq.lower() != 'off') else ""
-                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>{next_str}\n\nWhen enabled, requests for all 5 municipalities are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
+                                next_str = f"\n<b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and curr_freq.lower() != 'off') else ""
+                                txt = f"<b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>{next_str}\n\nWhen enabled, requests for all 5 municipalities are generated and dispatched automatically without requiring manual confirmation."
                                 send_telegram_msg(chat_id, txt, get_schedule_inline_keyboard())
                             else:
                                 welcome_txt = (
-                                    "🤖 <b>Multi-City FOIA Automation Bot</b>\n\n"
-                                    "Notifications active for Boca Raton, Delray Beach, Coconut Creek, Parkland & Hillsboro Beach!\n\n"
+                                    "<b>Multi-City FOIA Automation Bot</b>\n\n"
+                                    "Notifications active for Boca Raton, Delray Beach, Coconut Creek, Parkland and Hillsboro Beach.\n\n"
                                     "Use the bottom menu buttons below to trigger dispatches or manage schedules:"
                                 )
                                 send_telegram_msg(chat_id, welcome_txt, get_bottom_keyboard())
@@ -198,7 +198,7 @@ def run_telegram_bot_polling():
                             
                             if action == "approve_send_all":
                                 draft_map = PENDING_DRAFTS.get(chat_id)
-                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Dispatching FOIA emails to all 5 municipalities via SMTP...</b>")
+                                edit_telegram_msg(chat_id, msg_id, "<b>Dispatching FOIA emails to all 5 municipalities via SMTP...</b>")
                                 res = send_all_foia_requests(custom_drafts=draft_map)
                                 
                                 count = res.get("dispatched", 0)
@@ -206,18 +206,18 @@ def run_telegram_bot_polling():
                                 edit_telegram_msg(
                                     chat_id,
                                     msg_id,
-                                    f"✅ <b>Multi-City FOIA Batch Complete!</b>\n\n"
+                                    f"<b>Multi-City FOIA Batch Complete!</b>\n\n"
                                     f"Successfully sent: <b>{count}/{total}</b> emails via SMTP."
                                 )
                                 PENDING_DRAFTS.pop(chat_id, None)
                                 
                             elif action == "regenerate_all":
-                                edit_telegram_msg(chat_id, msg_id, "⏳ <b>Regenerating new drafts for all 5 municipalities...</b>")
+                                edit_telegram_msg(chat_id, msg_id, "<b>Regenerating new drafts for all 5 municipalities...</b>")
                                 handle_generate_and_preview_all(chat_id, edit_message_id=msg_id)
                                 
                             elif action == "cancel_draft":
                                 PENDING_DRAFTS.pop(chat_id, None)
-                                edit_telegram_msg(chat_id, msg_id, "🚫 <i>Batch draft cancelled.</i>")
+                                edit_telegram_msg(chat_id, msg_id, "<i>Batch draft cancelled.</i>")
 
                             elif action.startswith("sched_"):
                                 target_freq = action.replace("sched_", "")
@@ -226,12 +226,12 @@ def run_telegram_bot_polling():
                                 readable = label_map.get(new_freq, new_freq.capitalize())
                                 
                                 next_run = get_next_run_time()
-                                next_str = f"\n⏱️ <b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and new_freq != 'off') else ""
+                                next_str = f"\n<b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and new_freq != 'off') else ""
                                 
                                 edit_telegram_msg(
                                     chat_id,
                                     msg_id,
-                                    f"✅ <b>Automated Schedule Saved!</b>\n\n"
+                                    f"<b>Automated Schedule Saved!</b>\n\n"
                                     f"Frequency: <b>{readable}</b>{next_str}\n\n"
                                     f"<i>Multi-city dispatches will now run automatically on this interval across all 5 municipalities without requiring manual confirmation.</i>"
                                 )
