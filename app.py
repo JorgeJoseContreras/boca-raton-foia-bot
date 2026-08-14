@@ -24,6 +24,15 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(func=check_inbox, trigger="interval", minutes=10, id="imap_check_job")
 scheduler.start()
 
+def get_next_run_time():
+    try:
+        job = scheduler.get_job("automated_foia_job")
+        if job and job.next_run_time:
+            return job.next_run_time.strftime("%b %d, %Y at %I:%M %p UTC")
+    except Exception as e:
+        print(f"Error reading next_run_time: {e}")
+    return None
+
 def update_schedule_job(freq):
     set_setting("schedule_frequency", freq)
     
@@ -57,12 +66,14 @@ def index():
     requests = get_all_requests()
     responses = get_all_responses()
     schedule_freq = get_setting("schedule_frequency", "off")
+    next_run = get_next_run_time()
     sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
     return render_template(
         "index.html",
         requests=requests,
         responses=responses,
         schedule_freq=schedule_freq,
+        next_run_time=next_run,
         municipalities=TARGET_MUNICIPALITIES,
         sender_email=sender_email
     )
@@ -103,10 +114,10 @@ def manage_schedule():
         data = request.get_json(silent=True) or {}
         freq = data.get("frequency", "off")
         new_freq = update_schedule_job(freq)
-        return jsonify({"status": "success", "frequency": new_freq})
+        return jsonify({"status": "success", "frequency": new_freq, "next_run": get_next_run_time()})
     else:
         freq = get_setting("schedule_frequency", "off")
-        return jsonify({"status": "success", "frequency": freq})
+        return jsonify({"status": "success", "frequency": freq, "next_run": get_next_run_time()})
 
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():

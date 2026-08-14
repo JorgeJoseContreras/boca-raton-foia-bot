@@ -44,25 +44,53 @@
             margin-top: 5px;
         }
 
-        .city-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 25px;
-            background: #f0f4f9;
-            padding: 12px 15px;
-            border-radius: 5px;
+        .directory-container {
+            background: #f8fafd;
             border: 1px solid #d0dbe8;
+            border-radius: 6px;
+            padding: 18px;
+            margin-bottom: 25px;
         }
 
-        .city-badge {
-            background: #ffffff;
-            border: 1px solid #2b5797;
+        .directory-title {
+            font-size: 15px;
+            font-weight: bold;
             color: #2b5797;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .directory-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid #e1e4e8;
+            margin-bottom: 0;
+        }
+
+        .directory-table th, .directory-table td {
+            border: 1px solid #e1e4e8;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .directory-table th {
+            background: #f0f3f8;
+            color: #333;
             font-weight: 600;
+        }
+
+        .schedule-banner {
+            background: #e6f4ea;
+            border: 1px solid #b7e1cd;
+            color: #137333;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .btn-group {
@@ -115,27 +143,27 @@
             padding-bottom: 8px;
         }
 
-        table {
+        table.data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 25px;
             background: #ffffff;
         }
 
-        th, td {
+        table.data-table th, table.data-table td {
             border: 1px solid #dddddd;
             text-align: left;
             padding: 10px 12px;
             font-size: 13px;
         }
 
-        th {
+        table.data-table th {
             background-color: #f0f3f8;
             color: #333333;
             font-weight: 600;
         }
 
-        tr:nth-child(even) {
+        table.data-table tr:nth-child(even) {
             background-color: #fafafa;
         }
 
@@ -336,16 +364,40 @@
             </div>
         </header>
 
-        <div class="city-badges">
-            <span style="font-size: 12px; font-weight: bold; color: #555; align-self: center; margin-right: 5px;">Target Directory (5 Municipalities):</span>
-            {% for m in municipalities %}
-            <span class="city-badge">{{ m.name }} ({{ m.email }})</span>
-            {% endfor %}
+        <!-- Automated Schedule Status Banner -->
+        <div class="schedule-banner" id="schedBanner" style="{% if schedule_freq == 'off' %}display: none;{% endif %}">
+            <span>⏱️ <strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 5 municipalities.</span>
+            <span id="nextRunSpan">Next Scheduled Send: <strong>{{ next_run_time or 'Calculating...' }}</strong></span>
+        </div>
+
+        <!-- Target Municipality Directory Table (Row Format) -->
+        <div class="directory-container">
+            <div class="directory-title">Target Municipality Directory (5 Municipalities)</div>
+            <table class="directory-table">
+                <thead>
+                    <tr>
+                        <th style="width: 250px;">Municipality Name</th>
+                        <th style="width: 280px;">Records Custodian Email</th>
+                        <th>Statutory Basis</th>
+                        <th style="width: 120px;">Requested Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in municipalities %}
+                    <tr>
+                        <td><strong>{{ m.name }}</strong></td>
+                        <td><code>{{ m.email }}</code></td>
+                        <td>Florida Sunshine Law (F.S. Chapter 119)</td>
+                        <td>CSV/Excel Exports</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
 
         <div class="section-title">Outgoing Requests Log Across All Cities</div>
         {% if requests %}
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th style="width: 40px;">#</th>
@@ -500,6 +552,17 @@
                     body: JSON.stringify({ frequency: freq })
                 });
                 const data = await res.json();
+                
+                const banner = document.getElementById('schedBanner');
+                const nextSpan = document.getElementById('nextRunSpan');
+                
+                if (data.frequency === 'off') {
+                    banner.style.display = 'none';
+                } else {
+                    banner.style.display = 'flex';
+                    nextSpan.innerHTML = `Next Scheduled Send: <strong>${data.next_run || 'Calculating...'}</strong>`;
+                }
+                
                 showToast(`Schedule saved: ${data.frequency}`);
             } catch (err) {
                 showToast("Error updating schedule.");

@@ -129,7 +129,7 @@ def handle_generate_and_preview_all(chat_id, edit_message_id=None):
 def run_telegram_bot_polling():
     from email_engine import send_all_foia_requests, check_inbox
     from database import get_setting
-    from app import update_schedule_job
+    from app import update_schedule_job, get_next_run_time
     
     token = get_bot_token()
     if not token:
@@ -173,7 +173,9 @@ def run_telegram_bot_polling():
                                 )
                             elif text == "⚙️ Automation Schedule":
                                 curr_freq = get_setting("schedule_frequency", "off").capitalize()
-                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>\n\nWhen enabled, requests for all 5 municipalities are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
+                                next_run = get_next_run_time()
+                                next_str = f"\n⏱️ <b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and curr_freq.lower() != 'off') else ""
+                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>{next_str}\n\nWhen enabled, requests for all 5 municipalities are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
                                 send_telegram_msg(chat_id, txt, get_schedule_inline_keyboard())
                             else:
                                 welcome_txt = (
@@ -223,11 +225,14 @@ def run_telegram_bot_polling():
                                 label_map = {"daily": "Daily", "weekly": "Weekly", "biweekly": "Bi-weekly", "monthly": "Monthly", "off": "Off (Manual Only)"}
                                 readable = label_map.get(new_freq, new_freq.capitalize())
                                 
+                                next_run = get_next_run_time()
+                                next_str = f"\n⏱️ <b>Next Scheduled Dispatch:</b> {next_run}" if (next_run and new_freq != 'off') else ""
+                                
                                 edit_telegram_msg(
                                     chat_id,
                                     msg_id,
                                     f"✅ <b>Automated Schedule Saved!</b>\n\n"
-                                    f"Frequency: <b>{readable}</b>\n\n"
+                                    f"Frequency: <b>{readable}</b>{next_str}\n\n"
                                     f"<i>Multi-city dispatches will now run automatically on this interval across all 5 municipalities without requiring manual confirmation.</i>"
                                 )
                                 
