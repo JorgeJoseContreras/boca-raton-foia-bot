@@ -59,10 +59,11 @@ def edit_telegram_msg(chat_id, message_id, text, reply_markup=None):
         print(f"Failed to edit telegram msg: {e}")
 
 def get_bottom_keyboard():
-    """Returns bottom persistent reply keyboard (not attached to message bubble)"""
+    """Returns bottom persistent reply keyboard"""
     return {
         "keyboard": [
-            [{"text": "🚀 Send FOIA Request"}, {"text": "📬 Check Inbox"}]
+            [{"text": "🚀 Send FOIA Request"}, {"text": "📬 Check Inbox"}],
+            [{"text": "⚙️ Automation Schedule"}]
         ],
         "resize_keyboard": True,
         "is_persistent": True
@@ -74,10 +75,28 @@ def get_preview_inline_keyboard():
         "inline_keyboard": [
             [
                 {"text": "✅ Approve & Send Email", "callback_data": "approve_send"},
-                {"text": "🔄 Regenerate", "callback_data": "regenerate_draft"}
+                {"text": "Regenerate", "callback_data": "regenerate_draft"}
             ],
             [
                 {"text": "❌ Cancel", "callback_data": "cancel_draft"}
+            ]
+        ]
+    }
+
+def get_schedule_inline_keyboard():
+    """Inline buttons for selecting automation frequency"""
+    return {
+        "inline_keyboard": [
+            [
+                {"text": "🟢 Daily", "callback_data": "sched_daily"},
+                {"text": "🔵 Weekly", "callback_data": "sched_weekly"}
+            ],
+            [
+                {"text": "🟣 Bi-weekly", "callback_data": "sched_biweekly"},
+                {"text": "🔴 Monthly", "callback_data": "sched_monthly"}
+            ],
+            [
+                {"text": "⚪ Turn Off (Manual Only)", "callback_data": "sched_off"}
             ]
         ]
     }
@@ -104,6 +123,8 @@ def handle_generate_and_preview(chat_id, edit_message_id=None):
 
 def run_telegram_bot_polling():
     from email_engine import send_foia_email, check_inbox
+    from database import get_setting
+    from app import update_schedule_job
     
     token = get_bot_token()
     if not token:
@@ -145,14 +166,18 @@ def run_telegram_bot_polling():
                                     f"📬 <b>Inbox Check Complete!</b> Found <b>{count}</b> relevant item(s).",
                                     get_bottom_keyboard()
                                 )
+                            elif text == "⚙️ Automation Schedule":
+                                curr_freq = get_setting("schedule_frequency", "off").capitalize()
+                                txt = f"⚙️ <b>Automated FOIA Schedule Manager</b>\n\nCurrent Schedule: <b>{curr_freq}</b>\n\nWhen enabled, requests are generated with Gemini AI and dispatched automatically without requiring manual confirmation."
+                                send_telegram_msg(chat_id, txt, get_schedule_inline_keyboard())
                             else:
                                 welcome_txt = (
                                     "🤖 <b>Boca Raton FOIA Automation Bot</b>\n\n"
-                                    "Notifications active! Use the bottom menu buttons below to trigger requests or check inbox:"
+                                    "Notifications active! Use the bottom menu buttons below to trigger requests, check inbox, or manage automation schedules:"
                                 )
                                 send_telegram_msg(chat_id, welcome_txt, get_bottom_keyboard())
                             
-                        # Handle callback queries (inline preview buttons)
+                        # Handle callback queries (inline preview/schedule buttons)
                         elif "callback_query" in update:
                             cb = update["callback_query"]
                             chat_id = cb["message"]["chat"]["id"]
@@ -199,6 +224,20 @@ def run_telegram_bot_polling():
                             elif action == "cancel_draft":
                                 PENDING_DRAFTS.pop(chat_id, None)
                                 edit_telegram_msg(chat_id, msg_id, "🚫 <i>Draft cancelled.</i>")
+
+                            elif action.startswith("sched_"):
+                                target_freq = action.replace("sched_", "")
+                                new_freq = update_schedule_job(target_freq)
+                                label_map = {"daily": "Daily", "weekly": "Weekly", "biweekly": "Bi-weekly", "monthly": "Monthly", "off": "Off (Manual Only)"}
+                                readable = label_map.get(new_freq, new_freq.capitalize())
+                                
+                                edit_telegram_msg(
+                                    chat_id,
+                                    msg_id,
+                                    f"✅ <b>Automated Schedule Saved!</b>\n\n"
+                                    f"Frequency: <b>{readable}</b>\n\n"
+                                    f"<i>Automated dispatches will now run automatically on this interval without requiring manual confirmation.</i>"
+                                )
                                 
         except Exception as e:
             print(f"Telegram polling loop error: {e}")
