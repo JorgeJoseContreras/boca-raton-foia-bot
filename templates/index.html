@@ -368,7 +368,8 @@
                     </select>
                 </div>
                 <button class="btn btn-secondary" onclick="checkInbox()">Check Inbox Now</button>
-                <button class="btn" onclick="openPreviewModal()">Send All Requests Now</button>
+                <button class="btn btn-secondary" onclick="triggerFaxDispatch()">Send All FOIA Faxes</button>
+                <button class="btn" onclick="openPreviewModal()">Send All Emails Now</button>
             </div>
         </header>
 
@@ -586,6 +587,22 @@
                 if (data.count > 0) setTimeout(() => location.reload(), 2000);
             } catch (err) {
                 showToast("Error checking inbox.");
+            }
+        }
+
+        async function triggerFaxDispatch() {
+            showToast("Triggering batch FOIA Fax dispatch across all 5 municipalities...");
+            try {
+                const res = await fetch('/api/fax/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                showToast(data.message);
+                setTimeout(() => location.reload(), 3000);
+            } catch (err) {
+                showToast("Error triggering batch fax dispatch.");
             }
         }
     </script>

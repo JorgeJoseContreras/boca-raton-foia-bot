@@ -17,6 +17,14 @@ services:
         value: "imap.gmail.com"
       - key: SMTP_SERVER
         value: "smtp.gmail.com"
+      - key: TELNYX_API_KEY
+        sync: false
+      - key: TELNYX_CONNECTION_ID
+        sync: false
+      - key: TELNYX_FAX_NUMBER
+        sync: false
+      - key: APP_BASE_URL
+        value: "https://boca-raton-foia-bot.onrender.com"
     disk:
       name: sqlite-data
       mountPath: /data

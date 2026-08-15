@@ -68,7 +68,13 @@ def init_db():
         "delray_dept": "Code Enforcement",
         "delray_record_type": "Code Violations",
         "use_gemini_ai": "true",
-        "schedule_frequency": "off"
+        "schedule_frequency": "off",
+        "fax_boca_raton": "+15613937704",
+        "fax_delray_beach": "+15612437199",
+        "fax_coconut_creek": "+19549736770",
+        "fax_parkland": "+19547538838",
+        "fax_hillsboro_beach": "+19544274027",
+        "telnyx_fax_number": "+18005550199"
     }
     
     for key, val in defaults.items():

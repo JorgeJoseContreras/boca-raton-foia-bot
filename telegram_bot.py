@@ -61,8 +61,8 @@ def get_bottom_keyboard():
     """Returns bottom persistent reply keyboard"""
     return {
         "keyboard": [
-            [{"text": "Send All FOIA Requests"}, {"text": "Check Inbox"}],
-            [{"text": "Automation Schedule"}]
+            [{"text": "Send All FOIA Requests"}, {"text": "Send All FOIA Faxes"}],
+            [{"text": "Check Inbox"}, {"text": "Automation Schedule"}]
         ],
         "resize_keyboard": True,
         "is_persistent": True
@@ -73,10 +73,11 @@ def get_preview_inline_keyboard():
     return {
         "inline_keyboard": [
             [
-                {"text": "Approve and Send All (5 Cities)", "callback_data": "approve_send_all"},
-                {"text": "Regenerate All", "callback_data": "regenerate_all"}
+                {"text": "Send All via Email (5 Cities)", "callback_data": "approve_send_all"},
+                {"text": "Send All via Fax (5 Cities)", "callback_data": "approve_send_fax"}
             ],
             [
+                {"text": "Regenerate All", "callback_data": "regenerate_all"},
                 {"text": "Cancel", "callback_data": "cancel_draft"}
             ]
         ]
@@ -162,6 +163,10 @@ def run_telegram_bot_polling():
                             if text in ["Send All FOIA Requests", "🚀 Send All FOIA Requests", "🚀 Send FOIA Request"]:
                                 send_telegram_msg(chat_id, "<b>Generating email drafts for all 5 municipalities...</b>", get_bottom_keyboard())
                                 handle_generate_and_preview_all(chat_id)
+                            elif text in ["Send All FOIA Faxes", "📟 Send All FOIA Faxes"]:
+                                from fax_engine import send_all_foia_faxes
+                                send_telegram_msg(chat_id, "<b>Dispatching FOIA Faxes to all 5 municipalities via Telnyx...</b>", get_bottom_keyboard())
+                                threading.Thread(target=send_all_foia_faxes).start()
                             elif text in ["Check Inbox", "📬 Check Inbox"]:
                                 send_telegram_msg(chat_id, "<b>Checking IMAP Inbox for responses...</b>", get_bottom_keyboard())
                                 res = check_inbox()
@@ -208,6 +213,22 @@ def run_telegram_bot_polling():
                                     msg_id,
                                     f"<b>Multi-City FOIA Batch Complete!</b>\n\n"
                                     f"Successfully sent: <b>{count}/{total}</b> emails via SMTP."
+                                )
+                                PENDING_DRAFTS.pop(chat_id, None)
+
+                            elif action == "approve_send_fax":
+                                from fax_engine import send_all_foia_faxes
+                                draft_map = PENDING_DRAFTS.get(chat_id)
+                                edit_telegram_msg(chat_id, msg_id, "<b>Dispatching FOIA faxes to all 5 municipalities via Telnyx...</b>")
+                                res = send_all_foia_faxes(custom_drafts=draft_map)
+                                
+                                count = res.get("dispatched", 0)
+                                total = res.get("total", 5)
+                                edit_telegram_msg(
+                                    chat_id,
+                                    msg_id,
+                                    f"<b>Multi-City FOIA Fax Batch Complete!</b>\n\n"
+                                    f"Successfully sent: <b>{count}/{total}</b> faxes via Telnyx."
                                 )
                                 PENDING_DRAFTS.pop(chat_id, None)
                                 

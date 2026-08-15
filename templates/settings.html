@@ -230,6 +230,48 @@
             </div>
         </div>
 
+        <!-- Telnyx Fax API Configuration -->
+        <div class="card">
+            <div class="card-title">Telnyx Fax API Configuration</div>
+            <div class="form-group">
+                <label for="telnyxFaxNumber">Your Telnyx Fax Number (E.164 format, e.g. +18005550199)</label>
+                <input type="text" id="telnyxFaxNumber" value="{{ settings.telnyx_fax_number or '+18005550199' }}">
+            </div>
+            <div class="form-group">
+                <label for="telnyxConnectionId">Telnyx Connection / Application ID (Optional)</label>
+                <input type="text" id="telnyxConnectionId" value="{{ settings.telnyx_connection_id or '' }}" placeholder="e.g. 43a7596b-...">
+            </div>
+            <div class="form-group">
+                <label for="telnyxApiKey">Telnyx API Key (Optional override if not in Render Env)</label>
+                <input type="text" id="telnyxApiKey" value="{{ settings.telnyx_api_key or '' }}" placeholder="KEY018...">
+            </div>
+        </div>
+
+        <!-- Municipality Fax Numbers -->
+        <div class="card">
+            <div class="card-title">Target Municipality Fax Directory</div>
+            <div class="form-group">
+                <label for="faxBocaRaton">City of Boca Raton Fax Number</label>
+                <input type="text" id="faxBocaRaton" value="{{ settings.fax_boca_raton or '+15613937704' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxDelrayBeach">City of Delray Beach Fax Number</label>
+                <input type="text" id="faxDelrayBeach" value="{{ settings.fax_delray_beach or '+15612437199' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxCoconutCreek">City of Coconut Creek Fax Number</label>
+                <input type="text" id="faxCoconutCreek" value="{{ settings.fax_coconut_creek or '+19549736770' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxParkland">City of Parkland Fax Number</label>
+                <input type="text" id="faxParkland" value="{{ settings.fax_parkland or '+19547538838' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxHillsboroBeach">Town of Hillsboro Beach Fax Number</label>
+                <input type="text" id="faxHillsboroBeach" value="{{ settings.fax_hillsboro_beach or '+19544274027' }}">
+            </div>
+        </div>
+
         <footer>
             Created by Jorge Contreras
         </footer>
@@ -253,6 +295,16 @@
             const offset = document.getElementById('startDateOffset').value;
             const dept = document.getElementById('delrayDept').value;
             const rtype = document.getElementById('delrayRecordType').value;
+            
+            const telnyx_num = document.getElementById('telnyxFaxNumber').value;
+            const telnyx_conn = document.getElementById('telnyxConnectionId').value;
+            const telnyx_key = document.getElementById('telnyxApiKey').value;
+            
+            const fax_boca = document.getElementById('faxBocaRaton').value;
+            const fax_delray = document.getElementById('faxDelrayBeach').value;
+            const fax_coconut = document.getElementById('faxCoconutCreek').value;
+            const fax_parkland = document.getElementById('faxParkland').value;
+            const fax_hillsboro = document.getElementById('faxHillsboroBeach').value;
 
             try {
                 const res = await fetch('/api/settings', {
@@ -263,7 +315,15 @@
                         foia_template: template,
                         start_date_days_ago: offset,
                         delray_dept: dept,
-                        delray_record_type: rtype
+                        delray_record_type: rtype,
+                        telnyx_fax_number: telnyx_num,
+                        telnyx_connection_id: telnyx_conn,
+                        telnyx_api_key: telnyx_key,
+                        fax_boca_raton: fax_boca,
+                        fax_delray_beach: fax_delray,
+                        fax_coconut_creek: fax_coconut,
+                        fax_parkland: fax_parkland,
+                        fax_hillsboro_beach: fax_hillsboro
                     })
                 });
                 const data = await res.json();

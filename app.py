@@ -1,12 +1,13 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_from_directory
 from dotenv import load_dotenv
 import threading
 import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting
-from email_engine import send_all_foia_requests, check_inbox, generate_foia_content, TARGET_MUNICIPALITIES
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response
+from email_engine import send_all_foia_requests, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
+from fax_engine import send_all_foia_faxes, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
 
 load_dotenv()
@@ -80,7 +81,11 @@ def index():
 
 @app.route("/settings")
 def settings_page():
-    all_keys = ["use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency"]
+    all_keys = [
+        "use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency",
+        "telnyx_fax_number", "telnyx_connection_id", "telnyx_api_key",
+        "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach"
+    ]
     settings = {k: get_setting(k, "") for k in all_keys}
     return render_template("settings.html", settings=settings)
 
@@ -136,6 +141,68 @@ def manage_schedule():
 def trigger_inbox_check():
     res = check_inbox()
     return jsonify(res)
+
+@app.route("/api/fax/pdf/<pdf_id>", methods=["GET"])
+def serve_fax_pdf(pdf_id):
+    filename = f"foia_{pdf_id}.pdf"
+    file_path = os.path.join(PDF_STORAGE_DIR, filename)
+    if os.path.exists(file_path):
+        return send_from_directory(PDF_STORAGE_DIR, filename, mimetype="application/pdf")
+    return jsonify({"status": "error", "message": "PDF not found"}), 404
+
+@app.route("/api/fax/trigger", methods=["POST"])
+def trigger_fax_request():
+    def task():
+        send_all_foia_faxes()
+        
+    thread = threading.Thread(target=task)
+    thread.start()
+    
+    return jsonify({"status": "success", "message": "Multi-City FOIA Fax dispatch triggered for all 5 municipalities."})
+
+@app.route("/api/fax/webhook", methods=["POST"])
+def telnyx_fax_webhook():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        event = data.get("data", {})
+        event_type = event.get("event_type", "")
+        payload = event.get("payload", {})
+        
+        fax_id = payload.get("id", "N/A")
+        to_num = payload.get("to", "N/A")
+        from_num = payload.get("from", "N/A")
+        
+        if event_type == "fax.delivered":
+            send_telegram_notification(
+                f"✅ <b>Fax Delivered Successfully</b>\n"
+                f"To: <code>{to_num}</code>\n"
+                f"Fax ID: <code>{fax_id}</code>"
+            )
+        elif event_type == "fax.failed":
+            reason = payload.get("failure_reason", "Unknown failure")
+            send_telegram_notification(
+                f"⚠️ <b>Fax Transmission Failed</b>\n"
+                f"To: <code>{to_num}</code>\n"
+                f"Reason: {reason}\n"
+                f"Fax ID: <code>{fax_id}</code>"
+            )
+        elif event_type == "fax.received":
+            media_url = payload.get("media_url", "")
+            subject = f"Incoming Fax Response from {from_num}"
+            log_response(subject, from_num, True, media_url or "incoming_fax.pdf")
+            
+            media_link = f"\nMedia: <a href='{media_url}'>Download Fax PDF</a>" if media_url else ""
+            send_telegram_notification(
+                f"📥 <b>Inbound Fax Response Received</b>\n"
+                f"From: <code>{from_num}</code>\n"
+                f"To: <code>{to_num}</code>"
+                f"{media_link}"
+            )
+            
+        return jsonify({"status": "success"})
+    except Exception as e:
+        print(f"Telnyx Webhook Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
