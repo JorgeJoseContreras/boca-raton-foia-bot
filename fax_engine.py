@@ -38,7 +38,7 @@ def get_city_fax_number(city_name):
         "City of Coconut Creek": "+19549736770",
         "City of Parkland": "+19547538838",
         "Town of Hillsboro Beach": "+18445421010",
-        "Town of Highland Beach": "+15612653582"
+        "Town of Highland Beach": "+18445421010"
     }
     return defaults.get(city_name, "")
 

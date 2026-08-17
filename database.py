@@ -99,15 +99,16 @@ def init_db():
         "fax_coconut_creek": "+19549736770",
         "fax_parkland": "+19547538838",
         "fax_hillsboro_beach": "+18445421010",
-        "fax_highland_beach": "+15612653582",
+        "fax_highland_beach": "+18445421010",
         "telnyx_fax_number": "+17624752325"
     }
     
     for key, val in defaults.items():
         cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, val))
         
-    # Force update legacy default Hillsboro fax number to +18445421010
+    # Force update legacy default Hillsboro and Highland Beach fax numbers to +18445421010
     cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_hillsboro_beach' AND (value = '+19544274027' OR value = '+19544274834')")
+    cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_highland_beach' AND value = '+15612653582'")
     
     # Force update legacy default FOIA template to modern format with dynamic addressee & date placeholders
     cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
