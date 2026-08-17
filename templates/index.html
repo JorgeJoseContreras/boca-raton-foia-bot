@@ -125,6 +125,28 @@
             background-color: #1e3d6b;
         }
 
+        .btn:disabled, .btn[disabled] {
+            opacity: 0.65;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+
+        .btn-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .btn-secondary {
             background-color: #6c757d;
         }
@@ -369,7 +391,7 @@
                         <option value="monthly" {% if schedule_freq == 'monthly' %}selected{% endif %}>Monthly (Every 30d)</option>
                     </select>
                 </div>
-                <button class="btn" onclick="openPreviewModal()">Run Automation Now</button>
+                <button class="btn" id="runAutoBtn" onclick="runAutomationClicked(this)">Run Automation Now</button>
             </div>
         </header>
 
@@ -400,7 +422,7 @@
                         <td>Florida Sunshine Law (F.S. Chapter 119)</td>
                         <td>{% if m.type == 'fax' or m.email.startswith('+') %}Telnyx Cloud Fax{% else %}CSV/Excel Exports{% endif %}</td>
                         <td style="text-align: center;">
-                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="sendSingleCity('{{ m.name }}')">Send</button>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="sendSingleCity(this, '{{ m.name }}')">Send</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -538,9 +560,24 @@
             }
         }
 
-        async function sendAllCustomEmails() {
-            closeModal();
-            showToast("Triggering batch email dispatch across 5 municipalities...");
+        async function runAutomationClicked(btn) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> Generating...';
+            }
+            await openPreviewModal();
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Run Automation Now';
+            }
+        }
+
+        async function sendAllCustomEmails(btn) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> Sending All...';
+            }
+            showToast("Triggering batch FOIA dispatch across all municipalities...");
 
             try {
                 const res = await fetch('/api/trigger', {
@@ -553,6 +590,10 @@
                 setTimeout(() => location.reload(), 3000);
             } catch (err) {
                 showToast("Error sending batch emails.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Send All Requests Now';
+                }
             }
         }
 
@@ -610,7 +651,11 @@
             }
         }
 
-        async function sendSingleCity(cityName) {
+        async function sendSingleCity(btn, cityName) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> Sending...';
+            }
             showToast(`Triggering FOIA request for ${cityName}...`);
             try {
                 const res = await fetch('/api/trigger_single', {
@@ -623,6 +668,10 @@
                 setTimeout(() => location.reload(), 3000);
             } catch (err) {
                 showToast("Error triggering single city request.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Send';
+                }
             }
         }
     </script>
