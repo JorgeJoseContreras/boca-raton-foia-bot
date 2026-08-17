@@ -113,17 +113,15 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         # 2. From (Sitting on underline after From: (Optional) )
         can.drawString(135, 537, "Jorge Contreras")
         
-        # 3. Phone (Sitting on underline after Phone: (Optional) )
-        can.drawString(410, 537, "(561) 555-0199")
+        # 3. Phone (Optional) -> Omitted / left blank
         
         # 4. Email Address (Sitting on underline after Email Address: (Optional) )
         can.drawString(185, 513, sender_email)
         
         # 5. ITEM(S) REQUESTED (Inside Box 1, keeping OFFICE USE column clear)
         can.setFont("Helvetica", 9.5)
-        can.drawString(55, 440, "Public Records Request under F.S. Chapter 119 for digital exports (CSV/Excel) covering")
-        can.drawString(55, 420, "active code violations, condemned properties, and upcoming demolitions in Town of")
-        can.drawString(55, 390, "Hillsboro Beach, including property owner mailing addresses.")
+        can.drawString(55, 423, "Public Records Request under F.S. Chapter 119 for digital exports (CSV/Excel) covering")
+        can.drawString(36, 401, "active code violations, condemned properties, demolitions, and owner mailing addresses.")
         
         can.save()
         overlay_packet.seek(0)
