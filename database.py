@@ -80,6 +80,9 @@ def init_db():
     for key, val in defaults.items():
         cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, val))
         
+    # Force update legacy default Hillsboro fax number to +18445421010
+    cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_hillsboro_beach' AND (value = '+19544274027' OR value = '+19544274834')")
+    
     conn.commit()
     conn.close()
 
