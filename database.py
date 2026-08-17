@@ -4,6 +4,7 @@ import os
 DATABASE_PATH = os.getenv("DATABASE_PATH", "foia.db")
 
 DEFAULT_TEMPLATE = (
+    "Dear {addressee},\n\n"
     "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {city_name}, split across distinct departmental queries:\n\n"
     "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {date_of_request}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
     "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {date_of_request}.\n\n"
@@ -108,10 +109,10 @@ def init_db():
     # Force update legacy default Hillsboro fax number to +18445421010
     cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_hillsboro_beach' AND (value = '+19544274027' OR value = '+19544274834')")
     
-    # Force update legacy default FOIA template to modern 3-item format with dynamic date placeholders
+    # Force update legacy default FOIA template to modern format with dynamic addressee & date placeholders
     cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
     t_row = cursor.fetchone()
-    if t_row and ("1. Active Code Violations" not in t_row[0]):
+    if t_row and ("{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0]):
         cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
 
     conn.commit()

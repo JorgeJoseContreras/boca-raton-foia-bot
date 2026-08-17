@@ -35,6 +35,20 @@ def send_telegram_notification(message):
     except Exception as e:
         print(f"Telegram notification failed: {e}")
 
+def get_municipality_addressee(city_name):
+    if not city_name:
+        return "Records Custodian"
+    c_lower = city_name.lower()
+    if "town" in c_lower:
+        clerk_title = "Town Clerk / Records Custodian"
+    elif "village" in c_lower:
+        clerk_title = "Village Clerk / Records Custodian"
+    elif "county" in c_lower:
+        clerk_title = "County Records Custodian"
+    else:
+        clerk_title = "City Clerk / Records Custodian"
+    return f"{clerk_title} of {city_name}"
+
 def generate_foia_content(city_name="City of Boca Raton"):
     """
     Generates FOIA request content. If use_gemini_ai is enabled, calls Gemini API.
@@ -49,9 +63,10 @@ def generate_foia_content(city_name="City of Boca Raton"):
     days_offset = int(get_setting("start_date_days_ago", "30") or "30")
     # Default start date for demolition permits
     start_date = "January 1, 2024"
+    addressee = get_municipality_addressee(city_name)
     
     standard_body = (
-        f"Dear City Clerk / Records Custodian of {city_name},\n\n"
+        f"Dear {addressee},\n\n"
         f"Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {city_name}, split across distinct departmental queries:\n\n"
         f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
         f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
@@ -65,6 +80,10 @@ def generate_foia_content(city_name="City of Boca Raton"):
     
     if use_ai == "false" and custom_template:
         body = (custom_template
+                .replace("{addressee}", addressee)
+                .replace("City Clerk / Records Custodian of City of Boca Raton", addressee)
+                .replace("City Clerk / Records Custodian of " + city_name, addressee)
+                .replace("City Clerk of " + city_name, addressee)
                 .replace("{city_name}", city_name)
                 .replace("{date_of_request}", req_date)
                 .replace("{current_date}", req_date)
@@ -80,8 +99,8 @@ def generate_foia_content(city_name="City of Boca Raton"):
     try:
         client = genai.Client(api_key=api_key)
         prompt = (
-            f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law) "
-            f"directed specifically to the City Clerk / Records Custodian of {city_name}, Florida.\n"
+            f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law).\n"
+            f"The salutation MUST be addressed dynamically and accurately to: Dear {addressee},\n"
             f"The request MUST be split across distinct numbered items with these exact specifications:\n"
             f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n"
             f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
