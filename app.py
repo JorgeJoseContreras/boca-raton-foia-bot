@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -195,6 +195,7 @@ def telnyx_fax_webhook():
         from_num = payload.get("from", "N/A")
         
         if event_type == "fax.delivered":
+            update_request_status_by_fax_id(fax_id, "Sent")
             send_telegram_notification(
                 f"<b>Fax Delivered Successfully</b>\n"
                 f"To: <code>{to_num}</code>\n"
@@ -202,6 +203,7 @@ def telnyx_fax_webhook():
             )
         elif event_type == "fax.failed":
             reason = payload.get("failure_reason", "Unknown failure")
+            update_request_status_by_fax_id(fax_id, "Failed", failure_reason=reason)
             send_telegram_notification(
                 f"<b>Fax Transmission Failed</b>\n"
                 f"To: <code>{to_num}</code>\n"

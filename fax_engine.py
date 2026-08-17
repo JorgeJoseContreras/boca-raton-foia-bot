@@ -162,8 +162,10 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
             "quality": "high"
         }
         
-        if connection_id:
-            payload["connection_id"] = connection_id
+        # Only pass connection_id if set by explicit user setting
+        explicit_conn = get_setting("telnyx_connection_id")
+        if explicit_conn and explicit_conn.strip():
+            payload["connection_id"] = explicit_conn.strip()
             
         res = requests.post("https://api.telnyx.com/v2/faxes", headers=headers, json=payload, timeout=15)
         

@@ -123,6 +123,25 @@ def log_response(subject, sender, has_attachment, attachment_name=""):
     conn.commit()
     conn.close()
 
+def update_request_status_by_fax_id(fax_id, new_status, failure_reason=None):
+    if not fax_id or fax_id == "N/A":
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    search_term = f"%{fax_id}%"
+    if failure_reason:
+        cursor.execute(
+            "UPDATE requests SET status = ?, body_preview = body_preview || ' [Failure: ' || ? || ']' WHERE body_preview LIKE ?",
+            (new_status, failure_reason, search_term)
+        )
+    else:
+        cursor.execute(
+            "UPDATE requests SET status = ? WHERE body_preview LIKE ?",
+            (new_status, search_term)
+        )
+    conn.commit()
+    conn.close()
+
 def get_all_requests():
     conn = get_connection()
     conn.row_factory = sqlite3.Row
