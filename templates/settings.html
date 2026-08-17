@@ -180,7 +180,15 @@
 
             <div class="form-group">
                 <label for="foiaTemplate">Default FOIA Request Text Template</label>
-                <textarea id="foiaTemplate" rows="6">{{ settings.foia_template }}</textarea>
+                <textarea id="foiaTemplate" rows="11" style="line-height: 1.5; font-family: monospace; font-size: 12.5px;">{{ settings.foia_template }}</textarea>
+                <div style="margin-top: 8px; font-size: 12px; color: #555; background: #f0f4f8; border: 1px solid #d0dbe5; padding: 10px 14px; border-radius: 4px;">
+                    <strong>Dynamic Placeholders:</strong>
+                    <ul style="margin: 5px 0 0 18px; padding: 0;">
+                        <li><code>{date_of_request}</code> or <code>{current_date}</code>: Dynamically evaluated to the live date of dispatch (e.g., <em>August 17, 2026</em>).</li>
+                        <li><code>{start_date}</code>: Evaluated to the demolition search start date (e.g., <em>January 1, 2024</em>).</li>
+                        <li><code>{city_name}</code>: Dynamically evaluated to the specific recipient municipality.</li>
+                    </ul>
+                </div>
             </div>
         </div>
 
@@ -223,35 +231,39 @@
 
             <div class="form-group">
                 <label for="delrayRecordType">Type of Record(s) Requested</label>
-                <select id="delrayRecordType">
-                    <option value="Code Violations" {% if settings.delray_record_type == 'Code Violations' or not settings.delray_record_type %}selected{% endif %}>Code Violations</option>
-                    <option value="Abandoned Properties" {% if settings.delray_record_type == 'Abandoned Properties' %}selected{% endif %}>Abandoned Properties</option>
-                    <option value="Code Enforcement Cases" {% if settings.delray_record_type == 'Code Enforcement Cases' %}selected{% endif %}>Code Enforcement Cases</option>
-                    <option value="Other (Code Enforcement)" {% if settings.delray_record_type == 'Other (Code Enforcement)' %}selected{% endif %}>Other (Code Enforcement)</option>
-                </select>
+        <!-- Portal Defaults -->
+        <div class="card">
+            <div class="card-title">City of Delray Beach Web Portal Defaults</div>
+            <div class="form-group">
+                <label for="delrayDept">Default Department</label>
+                <input type="text" id="delrayDept" value="{{ settings.delray_dept or 'Code Enforcement' }}">
+            </div>
+            <div class="form-group">
+                <label for="delrayRecordType">Default Record Type</label>
+                <input type="text" id="delrayRecordType" value="{{ settings.delray_record_type or 'Code Violations' }}">
             </div>
         </div>
 
-        <!-- Telnyx Fax API Configuration -->
+        <!-- Telnyx Programmable Fax Settings -->
         <div class="card">
-            <div class="card-title">Telnyx Fax API Configuration</div>
+            <div class="card-title">Telnyx Cloud Fax Configuration</div>
             <div class="form-group">
-                <label for="telnyxFaxNumber">Your Telnyx Fax Number (E.164 format, e.g. +18005550199)</label>
-                <input type="text" id="telnyxFaxNumber" value="{{ settings.telnyx_fax_number or '+18005550199' }}">
+                <label for="telnyxFaxNumber">Telnyx Outbound Fax Number</label>
+                <input type="text" id="telnyxFaxNumber" value="{{ settings.telnyx_fax_number or '+17624752325' }}">
             </div>
             <div class="form-group">
-                <label for="telnyxConnectionId">Telnyx Connection / Application ID (Optional)</label>
-                <input type="text" id="telnyxConnectionId" value="{{ settings.telnyx_connection_id or '' }}" placeholder="e.g. 43a7596b-...">
+                <label for="telnyxConnectionId">Telnyx Fax Application Connection ID</label>
+                <input type="text" id="telnyxConnectionId" value="{{ settings.telnyx_connection_id or '3026849215633425751' }}">
             </div>
             <div class="form-group">
-                <label for="telnyxApiKey">Telnyx API Key (Optional override if not in Render Env)</label>
-                <input type="text" id="telnyxApiKey" value="{{ settings.telnyx_api_key or '' }}" placeholder="KEY018...">
+                <label for="telnyxApiKey">Telnyx API Secret Key (Bearer Token)</label>
+                <input type="password" id="telnyxApiKey" value="{{ settings.telnyx_api_key or '' }}" placeholder="KEY01...">
             </div>
         </div>
 
-        <!-- Municipality Fax Numbers -->
+        <!-- Target Municipality Fax Numbers -->
         <div class="card">
-            <div class="card-title">Target Municipality Fax Directory</div>
+            <div class="card-title">Municipality Fax Routing Directory</div>
             <div class="form-group">
                 <label for="faxBocaRaton">City of Boca Raton Fax Number</label>
                 <input type="text" id="faxBocaRaton" value="{{ settings.fax_boca_raton or '+15613937704' }}">
@@ -280,8 +292,11 @@
 
         <div class="card" style="border-color: #fecaca; background: #fffbfb;">
             <div class="card-title" style="color: #b91c1c; border-color: #fee2e2;">Log Management</div>
-            <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 12px;">Clear all outgoing FOIA request records from the database table.</p>
-            <button class="btn" style="background-color: #dc2626; padding: 8px 16px; font-size: 13px;" onclick="clearAllLogs()">Clear Outgoing Requests Log</button>
+            <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 12px;">Clear all outgoing FOIA request records from the active table. Cleared records are preserved in the archive.</p>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                <button class="btn" style="background-color: #dc2626; padding: 8px 16px; font-size: 13px;" onclick="clearAllLogs()">Clear Outgoing Requests Log</button>
+                <a href="/archive" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px; text-decoration: none;">View Cleared / Archived History</a>
+            </div>
         </div>
 
         <footer>

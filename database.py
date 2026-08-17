@@ -4,10 +4,10 @@ import os
 DATABASE_PATH = os.getenv("DATABASE_PATH", "foia.db")
 
 DEFAULT_TEMPLATE = (
-    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records:\n\n"
-    "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
-    "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
-    "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
+    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {city_name}, split across distinct departmental queries:\n\n"
+    "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {date_of_request}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
+    "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {date_of_request}.\n\n"
+    "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {date_of_request}, including parcel ID, site address, and contractor/owner details.\n\n"
     "Please transmit all electronic files and CSV/Excel exports to: jorge.properties.123@gmail.com\n\n"
     "Thank you for your assistance.\n\n"
     "Sincerely,\nJorge Contreras"
@@ -44,6 +44,23 @@ def init_db():
     except sqlite3.OperationalError:
         pass
     
+    # Table for tracking archived / cleared FOIA requests
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS archived_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            original_id INTEGER,
+            timestamp DATETIME,
+            archived_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            status TEXT,
+            record_type TEXT,
+            recipient_email TEXT,
+            subject TEXT,
+            body_preview TEXT,
+            city_name TEXT,
+            pdf_id TEXT
+        )
+    ''')
+
     # Table for tracking email responses and attachments
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS responses (
@@ -91,6 +108,12 @@ def init_db():
     # Force update legacy default Hillsboro fax number to +18445421010
     cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_hillsboro_beach' AND (value = '+19544274027' OR value = '+19544274834')")
     
+    # Force update legacy default FOIA template to modern 3-item format with dynamic date placeholders
+    cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
+    t_row = cursor.fetchone()
+    if t_row and ("1. Active Code Violations" not in t_row[0]):
+        cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
+
     conn.commit()
     conn.close()
 
@@ -224,7 +247,34 @@ def get_all_responses():
 def clear_all_requests():
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO archived_requests (original_id, timestamp, status, record_type, recipient_email, subject, body_preview, city_name, pdf_id)
+        SELECT id, timestamp, status, record_type, recipient_email, subject, body_preview, city_name, pdf_id
+        FROM requests
+    ''')
     cursor.execute('DELETE FROM requests')
+    conn.commit()
+    conn.close()
+
+def get_archived_requests():
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM archived_requests ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    result = []
+    for row in rows:
+        d = dict(row)
+        d["timestamp"] = format_eastern_timestamp(d.get("timestamp"))
+        d["archived_at"] = format_eastern_timestamp(d.get("archived_at"))
+        result.append(d)
+    return result
+
+def purge_archived_requests():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM archived_requests')
     conn.commit()
     conn.close()
 

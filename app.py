@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -167,7 +167,18 @@ def get_requests_api():
 @app.route("/api/clear_logs", methods=["POST"])
 def clear_logs_endpoint():
     clear_all_requests()
-    return jsonify({"status": "success", "message": "Outgoing request logs have been cleared."})
+    return jsonify({"status": "success", "message": "Outgoing request logs have been archived and cleared from active log."})
+
+@app.route("/archive")
+def archive_page():
+    archived_logs = get_archived_requests()
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    return render_template("archive.html", archived_logs=archived_logs, sender_email=sender_email)
+
+@app.route("/api/archive/purge", methods=["POST"])
+def purge_archive_endpoint():
+    purge_archived_requests()
+    return jsonify({"status": "success", "message": "Archived request history has been permanently purged."})
 
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():

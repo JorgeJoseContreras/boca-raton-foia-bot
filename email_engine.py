@@ -64,7 +64,13 @@ def generate_foia_content(city_name="City of Boca Raton"):
     subject_default = f"Florida Chapter 119 Public Records Request - Code Compliance & Demolition Lists - {city_name}"
     
     if use_ai == "false" and custom_template:
-        body = custom_template.replace("{city_name}", city_name).replace("{req_date}", req_date).replace("{start_date}", start_date).replace("City of Boca Raton", city_name)
+        body = (custom_template
+                .replace("{city_name}", city_name)
+                .replace("{date_of_request}", req_date)
+                .replace("{current_date}", req_date)
+                .replace("{req_date}", req_date)
+                .replace("{start_date}", start_date)
+                .replace("City of Boca Raton", city_name))
         return subject_default, body
 
     api_key = os.getenv("GEMINI_API_KEY")
