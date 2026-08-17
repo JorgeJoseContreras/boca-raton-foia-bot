@@ -439,13 +439,7 @@
                     <tr>
                         <td><strong>{{ m.name }}</strong></td>
                         <td>
-                            {% if m.custodian_email %}
-                                <code>{{ m.custodian_email }}</code> <span style="font-size: 11px; color: #666;">(Fax: {{ m.email }})</span>
-                            {% elif m.type == 'fax' or m.email.startswith('+') %}
-                                <code>{{ m.email }}</code> <span style="font-size: 11px; color: #666;">(Fax)</span>
-                            {% else %}
-                                <code>{{ m.email }}</code>
-                            {% endif %}
+                            <code>{{ m.email }}</code> {% if m.type == 'fax' or m.email.startswith('+') %}<span style="font-size: 11px; color: #666;">(Fax)</span>{% endif %}
                         </td>
                         <td>{% if m.type == 'fax' or m.email.startswith('+') %}Telnyx Cloud Fax (PDF Letter / Form){% else %}Email Transmission (CSV / Excel){% endif %}</td>
                         <td style="text-align: center;">
