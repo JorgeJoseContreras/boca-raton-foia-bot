@@ -109,9 +109,15 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
     """
     Sends a FOIA Request via Telnyx Fax API.
     """
-    api_key = os.getenv("TELNYX_API_KEY") or get_setting("telnyx_api_key")
-    connection_id = os.getenv("TELNYX_CONNECTION_ID") or get_setting("telnyx_connection_id", "3026849215633425751")
-    from_fax = os.getenv("TELNYX_FAX_NUMBER") or get_setting("telnyx_fax_number", "+17624752325")
+    raw_key = os.getenv("TELNYX_API_KEY") or get_setting("telnyx_api_key") or ""
+    api_key = raw_key.strip().strip('"').strip("'")
+    
+    raw_conn = os.getenv("TELNYX_CONNECTION_ID") or get_setting("telnyx_connection_id", "3026849215633425751") or ""
+    connection_id = raw_conn.strip().strip('"').strip("'")
+    
+    raw_from = os.getenv("TELNYX_FAX_NUMBER") or get_setting("telnyx_fax_number", "+17624752325") or ""
+    from_fax = raw_from.strip().strip('"').strip("'")
+    
     base_url = os.getenv("APP_BASE_URL", "https://boca-raton-foia-bot.onrender.com").rstrip("/")
     
     if not target_fax_number:
