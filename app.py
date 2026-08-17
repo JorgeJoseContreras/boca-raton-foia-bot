@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -163,6 +163,11 @@ def manage_schedule():
 def get_requests_api():
     requests_list = get_all_requests()
     return jsonify({"status": "success", "requests": requests_list})
+
+@app.route("/api/clear_logs", methods=["POST"])
+def clear_logs_endpoint():
+    clear_all_requests()
+    return jsonify({"status": "success", "message": "Outgoing request logs have been cleared."})
 
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():

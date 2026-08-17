@@ -18,13 +18,15 @@
         }
 
         .container {
-            max-width: 900px;
-            margin: 30px auto;
+            width: 95%;
+            max-width: 1400px;
+            margin: 20px auto;
             background: #ffffff;
             border: 1px solid #e1e4e8;
             border-radius: 6px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            padding: 30px;
+            padding: 25px 35px;
+            box-sizing: border-box;
         }
 
         header {
@@ -272,6 +274,12 @@
             </div>
         </div>
 
+        <div class="card" style="border-color: #fecaca; background: #fffbfb;">
+            <div class="card-title" style="color: #b91c1c; border-color: #fee2e2;">Log Management</div>
+            <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 12px;">Clear all outgoing FOIA request records from the database table.</p>
+            <button class="btn" style="background-color: #dc2626; padding: 8px 16px; font-size: 13px;" onclick="clearAllLogs()">Clear Outgoing Requests Log</button>
+        </div>
+
         <footer>
             Created by Jorge Contreras
         </footer>
@@ -285,6 +293,18 @@
             t.innerText = msg;
             t.style.display = 'block';
             setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        async function clearAllLogs() {
+            if (!confirm("Are you sure you want to clear all outgoing FOIA request logs?")) return;
+            showToast("Clearing request logs...");
+            try {
+                const res = await fetch('/api/clear_logs', { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || "Logs cleared successfully.");
+            } catch (err) {
+                showToast("Error clearing request logs.");
+            }
         }
 
         async function saveSettings() {

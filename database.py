@@ -218,6 +218,13 @@ def get_all_responses():
         result.append(d)
     return result
 
+def clear_all_requests():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM requests')
+    conn.commit()
+    conn.close()
+
 if __name__ == "__main__":
     init_db()
     print(f"Database initialized at {DATABASE_PATH}")
