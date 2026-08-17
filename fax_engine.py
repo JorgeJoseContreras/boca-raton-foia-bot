@@ -35,7 +35,7 @@ def get_city_fax_number(city_name):
         "City of Delray Beach": "+15612437199",
         "City of Coconut Creek": "+19549736770",
         "City of Parkland": "+19547538838",
-        "Town of Hillsboro Beach": "+19544274027"
+        "Town of Hillsboro Beach": "+19544274834"
     }
     return defaults.get(city_name, "")
 
@@ -110,8 +110,8 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
     Sends a FOIA Request via Telnyx Fax API.
     """
     api_key = os.getenv("TELNYX_API_KEY") or get_setting("telnyx_api_key")
-    connection_id = os.getenv("TELNYX_CONNECTION_ID") or get_setting("telnyx_connection_id")
-    from_fax = os.getenv("TELNYX_FAX_NUMBER") or get_setting("telnyx_fax_number", "+18005550199")
+    connection_id = os.getenv("TELNYX_CONNECTION_ID") or get_setting("telnyx_connection_id", "3026849215633425751")
+    from_fax = os.getenv("TELNYX_FAX_NUMBER") or get_setting("telnyx_fax_number", "+17624752325")
     base_url = os.getenv("APP_BASE_URL", "https://boca-raton-foia-bot.onrender.com").rstrip("/")
     
     if not target_fax_number:
@@ -168,7 +168,7 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
             log_request("Sent", "Fax Request", target_fax_number, subject, f"[Fax ID: {fax_id}] {body_preview}", city_name=city_name)
             
             send_telegram_notification(
-                f"📟 <b>FOIA Fax Sent</b>\n"
+                f"<b>FOIA Fax Sent</b>\n"
                 f"City: <b>{city_name}</b>\n"
                 f"Fax Number: <code>{target_fax_number}</code>\n"
                 f"Subject: {subject}\n"

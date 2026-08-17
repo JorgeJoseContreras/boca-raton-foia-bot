@@ -174,14 +174,14 @@ def telnyx_fax_webhook():
         
         if event_type == "fax.delivered":
             send_telegram_notification(
-                f"✅ <b>Fax Delivered Successfully</b>\n"
+                f"<b>Fax Delivered Successfully</b>\n"
                 f"To: <code>{to_num}</code>\n"
                 f"Fax ID: <code>{fax_id}</code>"
             )
         elif event_type == "fax.failed":
             reason = payload.get("failure_reason", "Unknown failure")
             send_telegram_notification(
-                f"⚠️ <b>Fax Transmission Failed</b>\n"
+                f"<b>Fax Transmission Failed</b>\n"
                 f"To: <code>{to_num}</code>\n"
                 f"Reason: {reason}\n"
                 f"Fax ID: <code>{fax_id}</code>"
@@ -193,7 +193,7 @@ def telnyx_fax_webhook():
             
             media_link = f"\nMedia: <a href='{media_url}'>Download Fax PDF</a>" if media_url else ""
             send_telegram_notification(
-                f"📥 <b>Inbound Fax Response Received</b>\n"
+                f"<b>Inbound Fax Response Received</b>\n"
                 f"From: <code>{from_num}</code>\n"
                 f"To: <code>{to_num}</code>"
                 f"{media_link}"

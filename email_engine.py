@@ -14,11 +14,11 @@ import requests
 from database import log_request, log_response
 
 TARGET_MUNICIPALITIES = [
-    {"name": "City of Boca Raton", "email": "brcityclerk@myboca.us"},
-    {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com"},
-    {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net"},
-    {"name": "City of Parkland", "email": "amorales@cityofparkland.org"},
-    {"name": "Town of Hillsboro Beach", "email": "townclerk@townofhillsborobeach.com"}
+    {"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
+    {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
+    {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net", "type": "email"},
+    {"name": "City of Parkland", "email": "amorales@cityofparkland.org", "type": "email"},
+    {"name": "Town of Hillsboro Beach", "email": "+19544274834", "type": "fax"}
 ]
 
 def send_telegram_notification(message):
@@ -144,8 +144,11 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
 
 def send_all_foia_requests(custom_drafts=None):
     """
-    Iterates through all target municipalities and sends requests with 6-second rate limiting delays.
+    Iterates through all target municipalities and sends requests.
+    Hillsboro Beach is routed via Telnyx Fax API to +19544274834; others via Email.
     """
+    from fax_engine import send_single_foia_fax
+    
     results = []
     total = len(TARGET_MUNICIPALITIES)
     
@@ -153,7 +156,8 @@ def send_all_foia_requests(custom_drafts=None):
     
     for idx, target in enumerate(TARGET_MUNICIPALITIES):
         city = target["name"]
-        email_addr = target["email"]
+        addr = target["email"]
+        dispatch_type = target.get("type", "email")
         
         custom_sub = None
         custom_bdy = None
@@ -161,10 +165,14 @@ def send_all_foia_requests(custom_drafts=None):
             custom_sub = custom_drafts[city].get("subject")
             custom_bdy = custom_drafts[city].get("body")
             
-        res = send_single_foia_email(city, email_addr, custom_subject=custom_sub, custom_body=custom_bdy)
+        if city == "Town of Hillsboro Beach" or dispatch_type == "fax":
+            res = send_single_foia_fax(city, target_fax_number="+19544274834", custom_subject=custom_sub, custom_body=custom_bdy)
+        else:
+            res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy)
+            
         results.append(res)
         
-        # Rate limit delay (6s) between dispatches to avoid spam filters
+        # Rate limit delay (6s) between dispatches
         if idx < total - 1:
             time.sleep(6)
             

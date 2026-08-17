@@ -395,9 +395,9 @@
                     {% for m in municipalities %}
                     <tr>
                         <td><strong>{{ m.name }}</strong></td>
-                        <td><code>{{ m.email }}</code></td>
+                        <td><code>{{ m.email }}</code> {% if m.type == 'fax' or m.email.startswith('+') %}(Fax){% endif %}</td>
                         <td>Florida Sunshine Law (F.S. Chapter 119)</td>
-                        <td>CSV/Excel Exports</td>
+                        <td>{% if m.type == 'fax' or m.email.startswith('+') %}Telnyx Cloud Fax{% else %}CSV/Excel Exports{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
