@@ -84,7 +84,7 @@ def settings_page():
     all_keys = [
         "use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency",
         "telnyx_fax_number", "telnyx_connection_id", "telnyx_api_key",
-        "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach"
+        "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach", "fax_highland_beach"
     ]
     settings = {k: get_setting(k, "") for k in all_keys}
     return render_template("settings.html", settings=settings)
@@ -135,13 +135,13 @@ def trigger_single_request():
         return jsonify({"status": "error", "message": "city_name required"}), 400
         
     def task():
-        if city_name == "Town of Hillsboro Beach":
-            fax_num = get_setting("fax_hillsboro_beach", "+18445421010")
+        target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
+        if target and target.get("type") == "fax":
+            from fax_engine import get_city_fax_number
+            fax_num = get_city_fax_number(city_name) or target["email"]
             send_single_foia_fax(city_name, target_fax_number=fax_num)
-        else:
-            target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
-            if target:
-                send_single_foia_email(city_name, target["email"])
+        elif target:
+            send_single_foia_email(city_name, target["email"])
                 
     thread = threading.Thread(target=task)
     thread.start()

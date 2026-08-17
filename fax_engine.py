@@ -21,7 +21,8 @@ CITY_FAX_MAPPING = {
     "City of Delray Beach": "fax_delray_beach",
     "City of Coconut Creek": "fax_coconut_creek",
     "City of Parkland": "fax_parkland",
-    "Town of Hillsboro Beach": "fax_hillsboro_beach"
+    "Town of Hillsboro Beach": "fax_hillsboro_beach",
+    "Town of Highland Beach": "fax_highland_beach"
 }
 
 def get_city_fax_number(city_name):
@@ -36,7 +37,8 @@ def get_city_fax_number(city_name):
         "City of Delray Beach": "+15612437199",
         "City of Coconut Creek": "+19549736770",
         "City of Parkland": "+19547538838",
-        "Town of Hillsboro Beach": "+18445421010"
+        "Town of Hillsboro Beach": "+18445421010",
+        "Town of Highland Beach": "+15612653582"
     }
     return defaults.get(city_name, "")
 
@@ -194,7 +196,8 @@ def generate_foia_pdf(subject, body, output_path):
     
     # Date & Reference Header
     formatted_date = time.strftime("%B %d, %Y")
-    story.append(Paragraph(f"<b>Date:</b> {formatted_date}<br/><b>Transmission Type:</b> Official Public Records Request (Fax)", header_style))
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    story.append(Paragraph(f"<b>Date:</b> {formatted_date}<br/><b>Transmission Type:</b> Official Public Records Request (Fax)<br/><b>Reply Email Address:</b> <b>{sender_email}</b>", header_style))
     story.append(Spacer(1, 10))
     
     # Body Content (split by newlines into paragraphs)

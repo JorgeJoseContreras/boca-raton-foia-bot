@@ -79,6 +79,7 @@ def init_db():
         "fax_coconut_creek": "+19549736770",
         "fax_parkland": "+19547538838",
         "fax_hillsboro_beach": "+18445421010",
+        "fax_highland_beach": "+15612653582",
         "telnyx_fax_number": "+17624752325"
     }
     

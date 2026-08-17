@@ -272,6 +272,10 @@
                 <label for="faxHillsboroBeach">Town of Hillsboro Beach Fax Number</label>
                 <input type="text" id="faxHillsboroBeach" value="{{ settings.fax_hillsboro_beach or '+18445421010' }}">
             </div>
+            <div class="form-group">
+                <label for="faxHighlandBeach">Town of Highland Beach Fax Number</label>
+                <input type="text" id="faxHighlandBeach" value="{{ settings.fax_highland_beach or '+15612653582' }}">
+            </div>
         </div>
 
         <div class="card" style="border-color: #fecaca; background: #fffbfb;">
@@ -325,6 +329,7 @@
             const fax_coconut = document.getElementById('faxCoconutCreek').value;
             const fax_parkland = document.getElementById('faxParkland').value;
             const fax_hillsboro = document.getElementById('faxHillsboroBeach').value;
+            const fax_highland = document.getElementById('faxHighlandBeach').value;
 
             try {
                 const res = await fetch('/api/settings', {
@@ -343,7 +348,8 @@
                         fax_delray_beach: fax_delray,
                         fax_coconut_creek: fax_coconut,
                         fax_parkland: fax_parkland,
-                        fax_hillsboro_beach: fax_hillsboro
+                        fax_hillsboro_beach: fax_hillsboro,
+                        fax_highland_beach: fax_highland
                     })
                 });
                 const data = await res.json();
