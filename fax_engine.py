@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfgen import canvas
 
 from database import log_request, log_response, get_setting
 from email_engine import generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
