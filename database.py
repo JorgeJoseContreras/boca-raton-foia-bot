@@ -10,6 +10,7 @@ DEFAULT_TEMPLATE = (
     "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {date_of_request}.\n\n"
     "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {date_of_request}, including parcel ID, site address, and contractor/owner details.\n\n"
     "Please transmit all electronic files and CSV/Excel exports to: jorge.properties.123@gmail.com\n\n"
+    "If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
     "Thank you for your assistance.\n\n"
     "Sincerely,\nJorge Contreras"
 )
@@ -115,7 +116,7 @@ def init_db():
     # Force update legacy default FOIA template to modern format with dynamic addressee & date placeholders
     cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
     t_row = cursor.fetchone()
-    if t_row and ("{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0]):
+    if t_row and ("exceed $25.00" not in t_row[0] or "{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0]):
         cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
 
     conn.commit()

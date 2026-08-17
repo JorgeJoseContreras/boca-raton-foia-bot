@@ -73,6 +73,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
         f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
         f"Please transmit all electronic files and CSV/Excel data exports to email: jorge.properties.123@gmail.com\n\n"
+        f"If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
         f"Thank you for your assistance.\n\n"
         f"Sincerely,\nJorge Contreras"
     )
@@ -107,6 +108,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
             f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
             f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
             f"Explicitly include instruction to deliver data exports to email: jorge.properties.123@gmail.com\n"
+            f"Explicitly include this cost cap estimate clause: 'If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.'\n"
             f"Signed by Jorge Contreras.\n"
             f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
         )
