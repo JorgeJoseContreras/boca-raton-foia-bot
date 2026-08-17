@@ -34,7 +34,8 @@
             border-bottom: 2px solid #2b5797;
             padding-bottom: 15px;
             margin-bottom: 20px;
-            gap: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
         }
 
         h1 {
@@ -104,6 +105,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -367,9 +369,7 @@
                         <option value="monthly" {% if schedule_freq == 'monthly' %}selected{% endif %}>Monthly (Every 30d)</option>
                     </select>
                 </div>
-                <button class="btn btn-secondary" onclick="checkInbox()">Check Inbox Now</button>
-                <button class="btn btn-secondary" onclick="triggerFaxDispatch()">Send All FOIA Faxes</button>
-                <button class="btn" onclick="openPreviewModal()">Send All Emails Now</button>
+                <button class="btn" onclick="openPreviewModal()">Run Automation Now</button>
             </div>
         </header>
 
