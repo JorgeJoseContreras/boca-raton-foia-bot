@@ -44,9 +44,11 @@ import pypdf
 
 def generate_hillsboro_official_pdf(subject, body, output_path):
     """
-    Fills out the official Town of Hillsboro Beach Public Records Request PDF form template.
+    Fills out the official Town of Hillsboro Beach Public Records Request PDF form template
+    and combines it into a 2-page fax package (Page 1: Cover Note + Reply Email, Page 2: Filled Form).
     """
     template_path = os.path.join(os.path.dirname(__file__), "templates", "hillsboro_form.pdf")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
     
     if not os.path.exists(template_path):
         try:
@@ -62,8 +64,44 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         return generate_foia_pdf(subject, body, output_path)
 
     try:
-        packet = io.BytesIO()
-        can = canvas.Canvas(packet, pagesize=letter)
+        # --- Page 1: Generate Cover Note with explicit Reply Email ---
+        cover_packet = io.BytesIO()
+        doc = SimpleDocTemplate(
+            cover_packet,
+            pagesize=letter,
+            rightMargin=54,
+            leftMargin=54,
+            topMargin=54,
+            bottomMargin=54
+        )
+        
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, leading=20, textColor=colors.HexColor('#0F172A'), spaceAfter=12)
+        header_style = ParagraphStyle('Header', parent=styles['Normal'], fontSize=10, leading=14, textColor=colors.HexColor('#475569'), spaceAfter=16)
+        body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=11, leading=16, textColor=colors.HexColor('#1E293B'), spaceAfter=12)
+        
+        cover_body = body
+        if sender_email not in cover_body:
+            cover_body += f"\n\nPlease transmit all responsive public records and CSV/Excel data exports to email address: {sender_email}"
+            
+        story = [
+            Paragraph(subject, title_style),
+            HRFlowable(width="100%", thickness=1, color=colors.HexColor('#CBD5E1'), spaceAfter=14),
+            Paragraph(f"<b>Date:</b> {time.strftime('%B %d, %Y')}<br/><b>Transmission Type:</b> Official Public Records Request (Fax)<br/><b>Reply Email Address:</b> <b>{sender_email}</b>", header_style),
+            Spacer(1, 10)
+        ]
+        
+        for line in cover_body.split("\n"):
+            line_clean = line.strip()
+            if line_clean:
+                story.append(Paragraph(line_clean, body_style))
+                
+        doc.build(story)
+        cover_packet.seek(0)
+
+        # --- Page 2: Generate Filled Official Form Overlay ---
+        overlay_packet = io.BytesIO()
+        can = canvas.Canvas(overlay_packet, pagesize=letter)
         can.setFont("Helvetica-Bold", 10)
         can.setFillColor(colors.HexColor("#0F172A"))
         
@@ -78,7 +116,6 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         can.drawString(410, 549, "(561) 555-0199")
         
         # Email Address
-        sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
         can.drawString(180, 526, sender_email)
         
         # ITEM(S) REQUESTED
@@ -90,20 +127,24 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         can.drawString(60, 372, item_line2)
         
         can.save()
-        packet.seek(0)
+        overlay_packet.seek(0)
         
-        overlay_pdf = pypdf.PdfReader(packet)
+        overlay_pdf = pypdf.PdfReader(overlay_packet)
         original_pdf = pypdf.PdfReader(template_path)
-        writer = pypdf.PdfWriter()
         
-        page = original_pdf.pages[0]
-        page.merge_page(overlay_pdf.pages[0])
-        writer.add_page(page)
+        filled_form_page = original_pdf.pages[0]
+        filled_form_page.merge_page(overlay_pdf.pages[0])
+
+        # --- Combine Page 1 + Page 2 into 2-Page Fax Package ---
+        cover_pdf = pypdf.PdfReader(cover_packet)
+        writer = pypdf.PdfWriter()
+        writer.add_page(cover_pdf.pages[0])   # Page 1: Cover Note
+        writer.add_page(filled_form_page)     # Page 2: Filled Town Form
         
         with open(output_path, "wb") as f:
             writer.write(f)
     except Exception as e:
-        print("Error generating Hillsboro official PDF overlay, fallback to standard:", e)
+        print("Error generating Hillsboro official 2-page PDF overlay, fallback to standard:", e)
         generate_foia_pdf(subject, body, output_path)
 
 def generate_foia_pdf(subject, body, output_path):
