@@ -18,7 +18,7 @@ TARGET_MUNICIPALITIES = [
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
     {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net", "type": "email"},
     {"name": "City of Parkland", "email": "amorales@cityofparkland.org", "type": "email"},
-    {"name": "Town of Hillsboro Beach", "email": "+19544274834", "type": "fax"}
+    {"name": "Town of Hillsboro Beach", "email": "+18445421010", "type": "fax"}
 ]
 
 def send_telegram_notification(message):
@@ -166,7 +166,8 @@ def send_all_foia_requests(custom_drafts=None):
             custom_bdy = custom_drafts[city].get("body")
             
         if city == "Town of Hillsboro Beach" or dispatch_type == "fax":
-            res = send_single_foia_fax(city, target_fax_number="+19544274834", custom_subject=custom_sub, custom_body=custom_bdy)
+            fax_num = get_setting("fax_hillsboro_beach", "+18445421010")
+            res = send_single_foia_fax(city, target_fax_number=fax_num, custom_subject=custom_sub, custom_body=custom_bdy)
         else:
             res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy)
             

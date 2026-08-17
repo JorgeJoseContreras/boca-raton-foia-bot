@@ -35,7 +35,7 @@ def get_city_fax_number(city_name):
         "City of Delray Beach": "+15612437199",
         "City of Coconut Creek": "+19549736770",
         "City of Parkland": "+19547538838",
-        "Town of Hillsboro Beach": "+19544274834"
+        "Town of Hillsboro Beach": "+18445421010"
     }
     return defaults.get(city_name, "")
 

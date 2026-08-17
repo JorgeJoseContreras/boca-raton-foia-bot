@@ -73,8 +73,8 @@ def init_db():
         "fax_delray_beach": "+15612437199",
         "fax_coconut_creek": "+19549736770",
         "fax_parkland": "+19547538838",
-        "fax_hillsboro_beach": "+19544274027",
-        "telnyx_fax_number": "+18005550199"
+        "fax_hillsboro_beach": "+18445421010",
+        "telnyx_fax_number": "+17624752325"
     }
     
     for key, val in defaults.items():
