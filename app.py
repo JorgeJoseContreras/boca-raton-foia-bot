@@ -6,8 +6,8 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response
-from email_engine import send_all_foia_requests, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
-from fax_engine import send_all_foia_faxes, PDF_STORAGE_DIR
+from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
+from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
 
 load_dotenv()
@@ -125,6 +125,28 @@ def trigger_request():
     thread.start()
     
     return jsonify({"status": "success", "message": "Multi-City FOIA email dispatch triggered for all 5 municipalities."})
+
+@app.route("/api/trigger_single", methods=["POST"])
+def trigger_single_request():
+    data = request.get_json(silent=True) or {}
+    city_name = data.get("city_name")
+    
+    if not city_name:
+        return jsonify({"status": "error", "message": "city_name required"}), 400
+        
+    def task():
+        if city_name == "Town of Hillsboro Beach":
+            fax_num = get_setting("fax_hillsboro_beach", "+18445421010")
+            send_single_foia_fax(city_name, target_fax_number=fax_num)
+        else:
+            target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
+            if target:
+                send_single_foia_email(city_name, target["email"])
+                
+    thread = threading.Thread(target=task)
+    thread.start()
+    
+    return jsonify({"status": "success", "message": f"FOIA request triggered for {city_name}."})
 
 @app.route("/api/schedule", methods=["GET", "POST"])
 def manage_schedule():
