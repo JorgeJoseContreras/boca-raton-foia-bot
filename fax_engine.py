@@ -281,7 +281,7 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
             resp_data = res.json().get("data", {})
             fax_id = resp_data.get("id", "N/A")
             body_preview = (body[:150] + "...") if len(body) > 150 else body
-            log_request("Sent", "Fax Request", target_fax_number, subject, f"[Fax ID: {fax_id}] {body_preview}", city_name=city_name)
+            log_request("Sent", "Fax Request", target_fax_number, subject, f"[Fax ID: {fax_id}] {body_preview}", city_name=city_name, pdf_id=pdf_id)
             
             send_telegram_notification(
                 f"<b>FOIA Fax Sent</b>\n"

@@ -36,6 +36,11 @@ def init_db():
         cursor.execute("ALTER TABLE requests ADD COLUMN city_name TEXT")
     except sqlite3.OperationalError:
         pass
+
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN pdf_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     
     # Table for tracking email responses and attachments
     cursor.execute('''
@@ -101,13 +106,31 @@ def set_setting(key, value):
     conn.commit()
     conn.close()
 
-def log_request(status, record_type, recipient_email, subject, body_preview, city_name="City of Boca Raton"):
+def format_eastern_timestamp(ts):
+    if not ts:
+        return ""
+    from datetime import datetime, timezone
+    import zoneinfo
+    try:
+        # SQLite CURRENT_TIMESTAMP is in UTC format 'YYYY-MM-DD HH:MM:SS'
+        ts_clean = str(ts).strip()
+        if "EDT" in ts_clean or "EST" in ts_clean:
+            return ts_clean
+        dt = datetime.strptime(ts_clean, "%Y-%m-%d %H:%M:%S")
+        dt_utc = dt.replace(tzinfo=timezone.utc)
+        ny_tz = zoneinfo.ZoneInfo("America/New_York")
+        dt_ny = dt_utc.astimezone(ny_tz)
+        return dt_ny.strftime("%Y-%m-%d %I:%M:%S %p EDT")
+    except Exception:
+        return str(ts)
+
+def log_request(status, record_type, recipient_email, subject, body_preview, city_name="City of Boca Raton", pdf_id=None):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview, city_name)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (status, record_type, recipient_email, subject, body_preview, city_name))
+        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id))
     conn.commit()
     req_id = cursor.lastrowid
     conn.close()
@@ -146,19 +169,29 @@ def get_all_requests():
     conn = get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM requests ORDER BY timestamp DESC')
+    cursor.execute('SELECT * FROM requests ORDER BY id DESC')
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    result = []
+    for row in rows:
+        d = dict(row)
+        d["timestamp"] = format_eastern_timestamp(d.get("timestamp"))
+        result.append(d)
+    return result
 
 def get_all_responses():
     conn = get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM responses ORDER BY timestamp DESC')
+    cursor.execute('SELECT * FROM responses ORDER BY id DESC')
     rows = cursor.fetchall()
     conn.close()
-    return [dict(row) for row in rows]
+    result = []
+    for row in rows:
+        d = dict(row)
+        d["timestamp"] = format_eastern_timestamp(d.get("timestamp"))
+        result.append(d)
+    return result
 
 if __name__ == "__main__":
     init_db()

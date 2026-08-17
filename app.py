@@ -166,10 +166,16 @@ def trigger_inbox_check():
 
 @app.route("/api/fax/pdf/<pdf_id>", methods=["GET"])
 def serve_fax_pdf(pdf_id):
-    filename = f"foia_{pdf_id}.pdf"
+    if pdf_id.endswith(".pdf"):
+        filename = pdf_id
+    else:
+        filename = f"foia_{pdf_id}.pdf"
     file_path = os.path.join(PDF_STORAGE_DIR, filename)
     if os.path.exists(file_path):
         return send_from_directory(PDF_STORAGE_DIR, filename, mimetype="application/pdf")
+    local_pdf = os.path.join("pdfs", filename)
+    if os.path.exists(local_pdf):
+        return send_from_directory("pdfs", filename, mimetype="application/pdf")
     return jsonify({"status": "error", "message": "PDF not found"}), 404
 
 @app.route("/api/fax/trigger", methods=["POST"])

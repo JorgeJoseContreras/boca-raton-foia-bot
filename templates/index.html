@@ -435,25 +435,35 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;">#</th>
-                    <th style="width: 140px;">Date / Time</th>
-                    <th style="width: 150px;">Municipality</th>
-                    <th style="width: 80px;">Status</th>
-                    <th style="width: 160px;">Recipient Email</th>
+                    <th style="width: 35px;">#</th>
+                    <th style="width: 175px;">Date / Time (Miami/NYC)</th>
+                    <th style="width: 140px;">Municipality</th>
+                    <th style="width: 75px;">Status</th>
+                    <th style="width: 140px;">Recipient</th>
                     <th>Generated Subject Line</th>
                     <th>Body Preview</th>
+                    <th style="width: 90px; text-align: center;">Document</th>
                 </tr>
             </thead>
             <tbody>
                 {% for req in requests %}
                 <tr>
                     <td>{{ req.id }}</td>
-                    <td>{{ req.timestamp }}</td>
+                    <td><span style="font-weight: 500;">{{ req.timestamp }}</span></td>
                     <td><strong>{{ req.city_name or 'City of Boca Raton' }}</strong></td>
                     <td><span class="status-badge status-{{ req.status|lower }}">{{ req.status }}</span></td>
-                    <td>{{ req.recipient_email }}</td>
+                    <td><code>{{ req.recipient_email }}</code></td>
                     <td>{{ req.subject }}</td>
                     <td style="color: #555;">{{ req.body_preview }}</td>
+                    <td style="text-align: center;">
+                        {% if req.pdf_id %}
+                            <a href="/api/fax/pdf/{{ req.pdf_id }}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>
+                        {% elif req.recipient_email.startswith('+') or 'Fax' in req.record_type or 'Fax ID:' in req.body_preview %}
+                            <span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>
+                        {% else %}
+                            <span style="font-size: 11px; color: #888;">Email</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
