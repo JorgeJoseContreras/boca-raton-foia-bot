@@ -120,10 +120,20 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         # 4. Email Address (Sitting on underline after Email Address: (Optional) )
         can.drawString(185, 513, sender_email)
         
-        # 5. ITEM(S) REQUESTED (Inside Box 1, keeping OFFICE USE column clear)
-        can.setFont("Helvetica", 9.5)
-        can.drawString(55, 423, "Public Records Request under F.S. Chapter 119 for digital exports (CSV/Excel) covering")
-        can.drawString(36, 401, "active code violations, condemned properties, demolitions, and owner mailing addresses.")
+        # 5. ITEM(S) REQUESTED (Split across numbered rows 1, 2, and 3, keeping OFFICE USE column clear)
+        can.setFont("Helvetica", 8.8)
+        
+        # --- Box 1: Active Code Violations ---
+        can.drawString(55, 423, "Active Code Violations: Digital export of all open/active code violations as of " + formatted_date + ",")
+        can.drawString(36, 401, "including case number, property address, violation description, and owner mailing address (CSV).")
+        
+        # --- Box 2: Condemned Properties ---
+        can.drawString(55, 360, "Condemned Properties: List of all properties currently designated as condemned or unfit for human")
+        can.drawString(36, 338, "habitation as of " + formatted_date + ".")
+        
+        # --- Box 3: Demolition Permits ---
+        can.drawString(55, 298, "Demolition Permits: List of all demolition permits applied for, active, or completed between")
+        can.drawString(36, 276, "January 1, 2024 and " + formatted_date + ", including parcel ID, site address, and contractor/owner details.")
         
         can.save()
         overlay_packet.seek(0)

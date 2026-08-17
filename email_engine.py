@@ -45,35 +45,43 @@ def generate_foia_content(city_name="City of Boca Raton"):
     use_ai = get_setting("use_gemini_ai", "true")
     custom_template = get_setting("foia_template")
     
+    req_date = time.strftime("%B %d, %Y")
+    days_offset = int(get_setting("start_date_days_ago", "30") or "30")
+    # Default start date for demolition permits
+    start_date = "January 1, 2024"
+    
+    standard_body = (
+        f"Dear City Clerk / Records Custodian of {city_name},\n\n"
+        f"Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {city_name}, split across distinct departmental queries:\n\n"
+        f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
+        f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
+        f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
+        f"Please transmit all electronic files and CSV/Excel data exports to email: jorge.properties.123@gmail.com\n\n"
+        f"Thank you for your assistance.\n\n"
+        f"Sincerely,\nJorge Contreras"
+    )
+    
+    subject_default = f"Florida Chapter 119 Public Records Request - Code Compliance & Demolition Lists - {city_name}"
+    
     if use_ai == "false" and custom_template:
-        subject = f"Public Records Request - Code Compliance & Demolition Lists (FL Ch 119) - {city_name}"
-        body = custom_template.replace("City of Boca Raton", city_name)
-        return subject, body
+        body = custom_template.replace("{city_name}", city_name).replace("{req_date}", req_date).replace("{start_date}", start_date).replace("City of Boca Raton", city_name)
+        return subject_default, body
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        subject = f"Public Records Request - Code Compliance & Demolition Lists (FL Ch 119) - {city_name}"
-        body = (custom_template or (
-            f"Dear City Clerk of {city_name},\n\n"
-            f"Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic copy (CSV or Excel format) "
-            f"of all active code violation cases, condemned properties, and upcoming demolition lists within {city_name}. "
-            f"Please explicitly include the property owner's mailing address column in the report.\n\n"
-            f"Thank you for your assistance.\n\n"
-            f"Sincerely,\nJorge Contreras"
-        )).replace("City of Boca Raton", city_name)
-        return subject, body
+        return subject_default, standard_body
 
     try:
         client = genai.Client(api_key=api_key)
         prompt = (
             f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law) "
             f"directed specifically to the City Clerk / Records Custodian of {city_name}, Florida.\n"
-            f"The request MUST ask for an electronic export (CSV or Excel) of:\n"
-            f"1. Active code violation cases\n"
-            f"2. Condemned properties\n"
-            f"3. Upcoming demolition lists\n"
-            f"4. Explicitly requesting the property owner's mailing address column.\n\n"
-            f"Please make the wording unique, professional, and distinct while maintaining legal clarity under FL Ch. 119.\n"
+            f"The request MUST be split across distinct numbered items with these exact specifications:\n"
+            f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n"
+            f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
+            f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
+            f"Explicitly include instruction to deliver data exports to email: jorge.properties.123@gmail.com\n"
+            f"Signed by Jorge Contreras.\n"
             f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
         )
         
@@ -88,17 +96,10 @@ def generate_foia_content(city_name="City of Boca Raton"):
             text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
             
         data = json.loads(text)
-        return data.get("subject"), data.get("body")
+        return data.get("subject", subject_default), data.get("body", standard_body)
     except Exception as e:
         print(f"Error generating content via Gemini API for {city_name}: {e}")
-        subject = f"Florida Chapter 119 Public Records Request - Code Compliance & Condemned Properties - {city_name}"
-        body = (
-            f"Dear City Clerk of {city_name},\n\n"
-            f"Under Florida Chapter 119, I am submitting a public records request for digital exports (CSV/Excel) "
-            f"covering active code violations, condemned properties, and upcoming demolitions in {city_name}, including property owner mailing addresses.\n\n"
-            f"Thank you,\nJorge Contreras"
-        )
-        return subject, body
+        return subject_default, standard_body
 
 def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None):
     """

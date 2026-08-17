@@ -4,9 +4,11 @@ import os
 DATABASE_PATH = os.getenv("DATABASE_PATH", "foia.db")
 
 DEFAULT_TEMPLATE = (
-    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am requesting an electronic export (CSV or Excel format) "
-    "of all active code violation cases, condemned properties, and upcoming demolition lists. "
-    "Please explicitly include the property owner's mailing address column in the report.\n\n"
+    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records:\n\n"
+    "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
+    "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
+    "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
+    "Please transmit all electronic files and CSV/Excel exports to: jorge.properties.123@gmail.com\n\n"
     "Thank you for your assistance.\n\n"
     "Sincerely,\nJorge Contreras"
 )
