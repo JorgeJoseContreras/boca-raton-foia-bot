@@ -106,26 +106,24 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         can.setFont("Helvetica-Bold", 10)
         can.setFillColor(colors.HexColor("#0F172A"))
         
-        # Date of Request
+        # 1. Date of Request (Sitting on underline after Date of Request: )
         formatted_date = time.strftime("%B %d, %Y")
-        can.drawString(245, 574, formatted_date)
+        can.drawString(405, 560, formatted_date)
         
-        # From
-        can.drawString(135, 549, "Jorge Contreras")
+        # 2. From (Sitting on underline after From: (Optional) )
+        can.drawString(135, 537, "Jorge Contreras")
         
-        # Phone
-        can.drawString(410, 549, "(561) 555-0199")
+        # 3. Phone (Sitting on underline after Phone: (Optional) )
+        can.drawString(410, 537, "(561) 555-0199")
         
-        # Email Address
-        can.drawString(180, 526, sender_email)
+        # 4. Email Address (Sitting on underline after Email Address: (Optional) )
+        can.drawString(185, 513, sender_email)
         
-        # ITEM(S) REQUESTED
+        # 5. ITEM(S) REQUESTED (Inside Box 1, keeping OFFICE USE column clear)
         can.setFont("Helvetica", 9.5)
-        item_line1 = "Public Records Request under Florida Statute Chapter 119 for digital exports (CSV/Excel) covering active code"
-        item_line2 = "violations, condemned properties, and upcoming demolitions in Town of Hillsboro Beach, including owner mailing addresses."
-        
-        can.drawString(60, 432, item_line1)
-        can.drawString(60, 372, item_line2)
+        can.drawString(55, 440, "Public Records Request under F.S. Chapter 119 for digital exports (CSV/Excel) covering")
+        can.drawString(55, 420, "active code violations, condemned properties, and upcoming demolitions in Town of")
+        can.drawString(55, 390, "Hillsboro Beach, including property owner mailing addresses.")
         
         can.save()
         overlay_packet.seek(0)
