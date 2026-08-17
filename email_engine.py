@@ -20,7 +20,10 @@ TARGET_MUNICIPALITIES = [
     {"name": "City of Parkland", "email": "amorales@cityofparkland.org", "type": "email"},
     {"name": "Town of Hillsboro Beach", "email": "+18445421010", "type": "fax"},
     {"name": "Town of Highland Beach", "email": "+18445421010", "type": "fax"},
-    {"name": "City of Deerfield Beach", "email": "+18445421010", "type": "fax"}
+    {"name": "City of Deerfield Beach", "email": "+18445421010", "type": "fax"},
+    {"name": "City of Lighthouse Point", "email": "lhpadmin@lighthousepoint.com", "type": "email"},
+    {"name": "City of Margate", "email": "recordsmanagement@margatefl.com", "type": "email"},
+    {"name": "Town of Gulf Stream", "email": "aghlc.nm@gmail.com", "type": "email"}
 ]
 
 def send_telegram_notification(message):

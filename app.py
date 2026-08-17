@@ -76,6 +76,7 @@ def index():
         schedule_freq=schedule_freq,
         next_run_time=next_run,
         municipalities=TARGET_MUNICIPALITIES,
+        total_cities=len(TARGET_MUNICIPALITIES),
         sender_email=sender_email
     )
 

@@ -418,13 +418,13 @@
 
         <!-- Automated Schedule Status Banner -->
         <div class="schedule-banner" id="schedBanner" style="{% if schedule_freq == 'off' %}display: none;{% endif %}">
-            <span><strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 7 municipalities.</span>
+            <span><strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all {{ total_cities }} municipalities.</span>
             <span id="nextRunSpan">Next Scheduled Send: <strong>{{ next_run_time or 'Calculating...' }}</strong></span>
         </div>
 
         <!-- Target Municipality Directory Table (Row Format) -->
         <div class="directory-container">
-            <div class="directory-title">Target Municipality Directory (7 Municipalities)</div>
+            <div class="directory-title">Target Municipality Directory ({{ total_cities }} Municipalities)</div>
             <table class="directory-table">
                 <thead>
                     <tr>
@@ -538,10 +538,10 @@
     <!-- Multi-City Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-content">
-            <div class="modal-header">Review and Edit Multi-City FOIA Requests (7 Municipalities)</div>
+            <div class="modal-header">Review and Edit Multi-City FOIA Requests ({{ total_cities }} Municipalities)</div>
             
             <div id="draftsContainer">
-                <p style="color: #666; font-style: italic;">Generating AI drafts for all 7 municipalities...</p>
+                <p style="color: #666; font-style: italic;">Generating AI drafts for all {{ total_cities }} municipalities...</p>
             </div>
 
             <div class="modal-footer">
@@ -574,7 +574,7 @@
         }
 
         async function loadPreview() {
-            showToast("Generating AI drafts for all 5 municipalities...");
+            showToast("Generating AI drafts for all {{ total_cities }} municipalities...");
             const container = document.getElementById('draftsContainer');
             container.innerHTML = '<p style="color: #666; font-style: italic;">Generating AI drafts with Gemini, please wait...</p>';
             
@@ -689,7 +689,7 @@
         }
 
         async function triggerFaxDispatch() {
-            showToast("Triggering batch FOIA Fax dispatch across all 5 municipalities...");
+            showToast("Triggering batch FOIA Fax dispatch across all {{ total_cities }} municipalities...");
             try {
                 const res = await fetch('/api/fax/trigger', {
                     method: 'POST',
