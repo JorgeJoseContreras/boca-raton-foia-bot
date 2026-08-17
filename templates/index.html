@@ -213,6 +213,25 @@
             color: #155724;
         }
 
+        .status-sending {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-spinner {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border: 2px solid rgba(146, 64, 14, 0.25);
+            border-top-color: #92400e;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
         .status-failed {
             background-color: #f8d7da;
             color: #721c24;
@@ -451,7 +470,19 @@
                     <td>{{ req.id }}</td>
                     <td><span style="font-weight: 500;">{{ req.timestamp }}</span></td>
                     <td><strong>{{ req.city_name or 'City of Boca Raton' }}</strong></td>
-                    <td><span class="status-badge status-{{ req.status|lower }}">{{ req.status }}</span></td>
+                    <td>
+                        {% if req.status|lower == 'sending...' or req.status|lower == 'sending' %}
+                            <span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>
+                        {% elif req.status|lower == 'sent' %}
+                            <span class="status-badge status-sent">Sent</span>
+                        {% elif req.status|lower == 'delivered' %}
+                            <span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>
+                        {% elif req.status|lower == 'failed' %}
+                            <span class="status-badge status-failed">Failed</span>
+                        {% else %}
+                            <span class="status-badge">{{ req.status }}</span>
+                        {% endif %}
+                    </td>
                     <td><code>{{ req.recipient_email }}</code></td>
                     <td>{{ req.subject }}</td>
                     <td style="color: #555;">{{ req.body_preview }}</td>
@@ -597,7 +628,14 @@
                 });
                 const data = await res.json();
                 showToast(data.message);
-                setTimeout(() => location.reload(), 3000);
+                closePreviewModal();
+                setTimeout(refreshRequestsTable, 400);
+                setTimeout(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Send All Requests Now';
+                    }
+                }, 4000);
             } catch (err) {
                 showToast("Error sending batch emails.");
                 if (btn) {
@@ -661,6 +699,60 @@
             }
         }
 
+        async function refreshRequestsTable() {
+            try {
+                const res = await fetch('/api/requests');
+                const data = await res.json();
+                if (data.status === 'success' && data.requests) {
+                    const tbody = document.querySelector('table.data-table tbody');
+                    if (tbody) {
+                        tbody.innerHTML = data.requests.map(req => {
+                            let statusBadge = '';
+                            const st = (req.status || '').toLowerCase();
+                            if (st === 'sending...' || st === 'sending') {
+                                statusBadge = '<span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>';
+                            } else if (st === 'sent') {
+                                statusBadge = '<span class="status-badge status-sent">Sent</span>';
+                            } else if (st === 'delivered') {
+                                statusBadge = '<span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>';
+                            } else if (st === 'failed') {
+                                statusBadge = '<span class="status-badge status-failed">Failed</span>';
+                            } else {
+                                statusBadge = `<span class="status-badge">${req.status}</span>`;
+                            }
+
+                            let docCol = '';
+                            if (req.pdf_id) {
+                                docCol = `<a href="/api/fax/pdf/${req.pdf_id}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>`;
+                            } else if ((req.recipient_email || '').startsWith('+') || (req.record_type || '').includes('Fax') || (req.body_preview || '').includes('Fax ID:')) {
+                                docCol = '<span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>';
+                            } else {
+                                docCol = '<span style="font-size: 11px; color: #888;">Email</span>';
+                            }
+
+                            return `<tr>
+                                <td>${req.id}</td>
+                                <td><span style="font-weight: 500;">${req.timestamp || ''}</span></td>
+                                <td><strong>${req.city_name || 'City of Boca Raton'}</strong></td>
+                                <td>${statusBadge}</td>
+                                <td><code>${req.recipient_email || ''}</code></td>
+                                <td>${req.subject || ''}</td>
+                                <td style="color: #555;">${req.body_preview || ''}</td>
+                                <td style="text-align: center;">${docCol}</td>
+                            </tr>`;
+                        }).join('');
+                    }
+
+                    const hasSending = data.requests.some(r => (r.status || '').toLowerCase().includes('sending'));
+                    if (hasSending) {
+                        setTimeout(refreshRequestsTable, 1500);
+                    }
+                }
+            } catch (err) {
+                console.error("Error refreshing requests table:", err);
+            }
+        }
+
         async function sendSingleCity(btn, cityName) {
             if (btn) {
                 btn.disabled = true;
@@ -675,7 +767,14 @@
                 });
                 const data = await res.json();
                 showToast(data.message);
-                setTimeout(() => location.reload(), 3000);
+                // Immediately refresh table to show Sending... status
+                setTimeout(refreshRequestsTable, 400);
+                setTimeout(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Send';
+                    }
+                }, 4000);
             } catch (err) {
                 showToast("Error triggering single city request.");
                 if (btn) {

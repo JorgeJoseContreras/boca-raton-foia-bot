@@ -159,6 +159,11 @@ def manage_schedule():
         freq = get_setting("schedule_frequency", "off")
         return jsonify({"status": "success", "frequency": freq, "next_run": get_next_run_time()})
 
+@app.route("/api/requests", methods=["GET"])
+def get_requests_api():
+    requests_list = get_all_requests()
+    return jsonify({"status": "success", "requests": requests_list})
+
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():
     res = check_inbox()

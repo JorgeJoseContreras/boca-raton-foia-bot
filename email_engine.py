@@ -11,7 +11,7 @@ import json
 import traceback
 import requests
 
-from database import log_request, log_response
+from database import log_request, log_response, update_request_by_id
 
 TARGET_MUNICIPALITIES = [
     {"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
@@ -117,6 +117,9 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
     else:
         subject, body = generate_foia_content(city_name=city_name)
     
+    # 1. Log in progress immediately
+    req_id = log_request("Sending...", "Email Request", target_email, subject, "Preparing transmission...", city_name=city_name)
+    
     try:
         msg = MIMEMultipart()
         msg['From'] = sender_email
@@ -129,7 +132,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
             server.sendmail(sender_email, target_email, msg.as_string())
             
         body_preview = body[:150] + "..." if len(body) > 150 else body
-        log_request("Sent", "Email Request", target_email, subject, body_preview, city_name=city_name)
+        update_request_by_id(req_id, status="Sent", body_preview=body_preview, subject=subject)
         
         # Send Telegram Alert per city
         send_telegram_notification(f"<b>FOIA Request Sent</b>\nCity: <b>{city_name}</b>\nTo: {target_email}\nSubject: {subject}")
@@ -139,7 +142,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
     except Exception as e:
         error_msg = str(e)
         print(f"SMTP Error for {city_name}: {traceback.format_exc()}")
-        log_request("Failed", "Email Request", target_email, subject, f"Error: {error_msg}", city_name=city_name)
+        update_request_by_id(req_id, status="Failed", body_preview=f"Error: {error_msg}")
         return {"status": "error", "city": city_name, "message": error_msg}
 
 def send_all_foia_requests(custom_drafts=None):

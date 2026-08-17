@@ -10,7 +10,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
 
-from database import log_request, log_response, get_setting
+from database import log_request, log_response, get_setting, update_request_by_id
 from email_engine import generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 
 PDF_STORAGE_DIR = "/data/pdfs" if os.path.exists("/data") else "pdfs"
@@ -243,6 +243,9 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
         log_request("Failed", "Fax Request", "N/A", subject, msg, city_name=city_name)
         return {"status": "error", "message": msg, "city": city_name}
 
+    # 1. Log in progress immediately
+    req_id = log_request("Sending...", "Fax Request", target_fax_number or "N/A", subject, "Generating PDF & initiating fax call...", city_name=city_name)
+
     try:
         pdf_id = str(uuid.uuid4())
         pdf_filename = f"foia_{pdf_id}.pdf"
@@ -279,7 +282,7 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
             resp_data = res.json().get("data", {})
             fax_id = resp_data.get("id", "N/A")
             body_preview = (body[:150] + "...") if len(body) > 150 else body
-            log_request("Sent", "Fax Request", target_fax_number, subject, f"[Fax ID: {fax_id}] {body_preview}", city_name=city_name, pdf_id=pdf_id)
+            update_request_by_id(req_id, status="Sent", body_preview=f"[Fax ID: {fax_id}] {body_preview}", pdf_id=pdf_id)
             
             send_telegram_notification(
                 f"<b>FOIA Fax Sent</b>\n"
@@ -291,13 +294,13 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
             return {"status": "success", "city": city_name, "fax_id": fax_id, "recipient": target_fax_number}
         else:
             err_text = res.text
-            log_request("Failed", "Fax Request", target_fax_number, subject, f"Telnyx API Error: {err_text}", city_name=city_name)
+            update_request_by_id(req_id, status="Failed", body_preview=f"Telnyx API Error: {err_text}", pdf_id=pdf_id)
             return {"status": "error", "city": city_name, "message": err_text}
 
     except Exception as e:
         err_msg = str(e)
         print(f"Fax transmission error for {city_name}: {traceback.format_exc()}")
-        log_request("Failed", "Fax Request", target_fax_number or "N/A", subject, f"Error: {err_msg}", city_name=city_name)
+        update_request_by_id(req_id, status="Failed", body_preview=f"Error: {err_msg}")
         return {"status": "error", "city": city_name, "message": err_msg}
 
 def send_all_foia_faxes(custom_drafts=None):

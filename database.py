@@ -146,6 +146,31 @@ def log_response(subject, sender, has_attachment, attachment_name=""):
     conn.commit()
     conn.close()
 
+def update_request_by_id(req_id, status=None, body_preview=None, subject=None, pdf_id=None):
+    if not req_id:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    updates = []
+    params = []
+    if status is not None:
+        updates.append("status = ?")
+        params.append(status)
+    if body_preview is not None:
+        updates.append("body_preview = ?")
+        params.append(body_preview)
+    if subject is not None:
+        updates.append("subject = ?")
+        params.append(subject)
+    if pdf_id is not None:
+        updates.append("pdf_id = ?")
+        params.append(pdf_id)
+    if updates:
+        params.append(req_id)
+        cursor.execute(f"UPDATE requests SET {', '.join(updates)} WHERE id = ?", tuple(params))
+        conn.commit()
+    conn.close()
+
 def update_request_status_by_fax_id(fax_id, new_status, failure_reason=None):
     if not fax_id or fax_id == "N/A":
         return
