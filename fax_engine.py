@@ -22,7 +22,8 @@ CITY_FAX_MAPPING = {
     "City of Coconut Creek": "fax_coconut_creek",
     "City of Parkland": "fax_parkland",
     "Town of Hillsboro Beach": "fax_hillsboro_beach",
-    "Town of Highland Beach": "fax_highland_beach"
+    "Town of Highland Beach": "fax_highland_beach",
+    "City of Deerfield Beach": "fax_deerfield_beach"
 }
 
 def get_city_fax_number(city_name):
@@ -38,7 +39,8 @@ def get_city_fax_number(city_name):
         "City of Coconut Creek": "+19549736770",
         "City of Parkland": "+19547538838",
         "Town of Hillsboro Beach": "+18445421010",
-        "Town of Highland Beach": "+18445421010"
+        "Town of Highland Beach": "+18445421010",
+        "City of Deerfield Beach": "+19544804323"
     }
     return defaults.get(city_name, "")
 

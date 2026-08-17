@@ -19,7 +19,8 @@ TARGET_MUNICIPALITIES = [
     {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net", "type": "email"},
     {"name": "City of Parkland", "email": "amorales@cityofparkland.org", "type": "email"},
     {"name": "Town of Hillsboro Beach", "email": "+18445421010", "type": "fax"},
-    {"name": "Town of Highland Beach", "email": "+18445421010", "type": "fax"}
+    {"name": "Town of Highland Beach", "email": "+18445421010", "type": "fax"},
+    {"name": "City of Deerfield Beach", "email": "+19544804323", "type": "fax"}
 ]
 
 def send_telegram_notification(message):

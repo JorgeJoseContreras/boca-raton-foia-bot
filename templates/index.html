@@ -418,13 +418,13 @@
 
         <!-- Automated Schedule Status Banner -->
         <div class="schedule-banner" id="schedBanner" style="{% if schedule_freq == 'off' %}display: none;{% endif %}">
-            <span><strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 6 municipalities.</span>
+            <span><strong>Automated Schedule Active ({{ schedule_freq|capitalize }}):</strong> Requests are dispatched automatically across all 7 municipalities.</span>
             <span id="nextRunSpan">Next Scheduled Send: <strong>{{ next_run_time or 'Calculating...' }}</strong></span>
         </div>
 
         <!-- Target Municipality Directory Table (Row Format) -->
         <div class="directory-container">
-            <div class="directory-title">Target Municipality Directory (6 Municipalities)</div>
+            <div class="directory-title">Target Municipality Directory (7 Municipalities)</div>
             <table class="directory-table">
                 <thead>
                     <tr>
@@ -538,10 +538,10 @@
     <!-- Multi-City Preview Modal -->
     <div class="modal-overlay" id="previewModal">
         <div class="modal-content">
-            <div class="modal-header">Review and Edit Multi-City FOIA Requests (6 Municipalities)</div>
+            <div class="modal-header">Review and Edit Multi-City FOIA Requests (7 Municipalities)</div>
             
             <div id="draftsContainer">
-                <p style="color: #666; font-style: italic;">Generating AI drafts for all 6 municipalities...</p>
+                <p style="color: #666; font-style: italic;">Generating AI drafts for all 7 municipalities...</p>
             </div>
 
             <div class="modal-footer">

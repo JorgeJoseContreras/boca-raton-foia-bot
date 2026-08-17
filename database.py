@@ -100,6 +100,7 @@ def init_db():
         "fax_parkland": "+19547538838",
         "fax_hillsboro_beach": "+18445421010",
         "fax_highland_beach": "+18445421010",
+        "fax_deerfield_beach": "+19544804323",
         "telnyx_fax_number": "+17624752325"
     }
     

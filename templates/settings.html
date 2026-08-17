@@ -289,6 +289,10 @@
                 <label for="faxHighlandBeach">Town of Highland Beach Fax Number</label>
                 <input type="text" id="faxHighlandBeach" value="{{ settings.fax_highland_beach or '+18445421010' }}">
             </div>
+            <div class="form-group">
+                <label for="faxDeerfieldBeach">City of Deerfield Beach Fax Number</label>
+                <input type="text" id="faxDeerfieldBeach" value="{{ settings.fax_deerfield_beach or '+19544804323' }}">
+            </div>
         </div>
 
         <div class="card" style="border-color: #fecaca; background: #fffbfb;">
@@ -346,6 +350,7 @@
             const fax_parkland = document.getElementById('faxParkland').value;
             const fax_hillsboro = document.getElementById('faxHillsboroBeach').value;
             const fax_highland = document.getElementById('faxHighlandBeach').value;
+            const fax_deerfield = document.getElementById('faxDeerfieldBeach').value;
 
             try {
                 const res = await fetch('/api/settings', {
@@ -365,7 +370,8 @@
                         fax_coconut_creek: fax_coconut,
                         fax_parkland: fax_parkland,
                         fax_hillsboro_beach: fax_hillsboro,
-                        fax_highland_beach: fax_highland
+                        fax_highland_beach: fax_highland,
+                        fax_deerfield_beach: fax_deerfield
                     })
                 });
                 const data = await res.json();
