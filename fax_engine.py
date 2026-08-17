@@ -39,6 +39,73 @@ def get_city_fax_number(city_name):
     }
     return defaults.get(city_name, "")
 
+import io
+import pypdf
+
+def generate_hillsboro_official_pdf(subject, body, output_path):
+    """
+    Fills out the official Town of Hillsboro Beach Public Records Request PDF form template.
+    """
+    template_path = os.path.join(os.path.dirname(__file__), "templates", "hillsboro_form.pdf")
+    
+    if not os.path.exists(template_path):
+        try:
+            r = requests.get("https://www.townofhillsborobeach.com/DocumentCenter/View/66/Police-Department-Records-Request-PDF", headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+            if r.status_code == 200:
+                os.makedirs(os.path.dirname(template_path), exist_ok=True)
+                with open(template_path, "wb") as f:
+                    f.write(r.content)
+        except Exception as e:
+            print("Could not fetch remote template:", e)
+
+    if not os.path.exists(template_path):
+        return generate_foia_pdf(subject, body, output_path)
+
+    try:
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
+        can.setFont("Helvetica-Bold", 10)
+        can.setFillColor(colors.HexColor("#0F172A"))
+        
+        # Date of Request
+        formatted_date = time.strftime("%B %d, %Y")
+        can.drawString(245, 574, formatted_date)
+        
+        # From
+        can.drawString(135, 549, "Jorge Contreras")
+        
+        # Phone
+        can.drawString(410, 549, "(561) 555-0199")
+        
+        # Email Address
+        sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+        can.drawString(180, 526, sender_email)
+        
+        # ITEM(S) REQUESTED
+        can.setFont("Helvetica", 9.5)
+        item_line1 = "Public Records Request under Florida Statute Chapter 119 for digital exports (CSV/Excel) covering active code"
+        item_line2 = "violations, condemned properties, and upcoming demolitions in Town of Hillsboro Beach, including owner mailing addresses."
+        
+        can.drawString(60, 432, item_line1)
+        can.drawString(60, 372, item_line2)
+        
+        can.save()
+        packet.seek(0)
+        
+        overlay_pdf = pypdf.PdfReader(packet)
+        original_pdf = pypdf.PdfReader(template_path)
+        writer = pypdf.PdfWriter()
+        
+        page = original_pdf.pages[0]
+        page.merge_page(overlay_pdf.pages[0])
+        writer.add_page(page)
+        
+        with open(output_path, "wb") as f:
+            writer.write(f)
+    except Exception as e:
+        print("Error generating Hillsboro official PDF overlay, fallback to standard:", e)
+        generate_foia_pdf(subject, body, output_path)
+
 def generate_foia_pdf(subject, body, output_path):
     """
     Renders a clean PDF document for the FOIA request using ReportLab.
@@ -143,8 +210,11 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
         pdf_filename = f"foia_{pdf_id}.pdf"
         pdf_path = os.path.join(PDF_STORAGE_DIR, pdf_filename)
         
-        # Generate PDF
-        generate_foia_pdf(subject, body, pdf_path)
+        # Generate PDF (Use official Town PDF template for Hillsboro Beach)
+        if city_name == "Town of Hillsboro Beach":
+            generate_hillsboro_official_pdf(subject, body, pdf_path)
+        else:
+            generate_foia_pdf(subject, body, pdf_path)
         
         media_url = f"{base_url}/api/fax/pdf/{pdf_id}"
         webhook_url = f"{base_url}/api/fax/webhook"
