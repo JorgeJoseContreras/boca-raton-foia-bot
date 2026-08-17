@@ -40,7 +40,7 @@ def get_city_fax_number(city_name):
         "City of Parkland": "+19547538838",
         "Town of Hillsboro Beach": "+18445421010",
         "Town of Highland Beach": "+18445421010",
-        "City of Deerfield Beach": "+19544804323"
+        "City of Deerfield Beach": "+18445421010"
     }
     return defaults.get(city_name, "")
 
