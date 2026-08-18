@@ -499,7 +499,7 @@ def check_inbox():
                                 html_body = _decode_message_part(part)
                             continue
 
-                        if has_attachment_marker or not is_text_part:
+                        if has_attachment_marker:
                             has_attachment = True
                             if filename and not attachment_name:
                                 attachment_name = filename
