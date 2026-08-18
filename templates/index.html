@@ -264,10 +264,26 @@
             border-radius: 4px;
             padding: 10px 14px;
             margin-bottom: 10px;
+            cursor: pointer;
         }
 
         .feed-item:last-child {
             margin-bottom: 0;
+        }
+
+        .feed-body {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eeeeee;
+            font-size: 13px;
+            color: #444444;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .feed-item.expanded .feed-body {
+            display: block;
         }
 
         .feed-header {
@@ -592,7 +608,7 @@
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
-                <div class="feed-item">
+                <div class="feed-item" onclick="this.classList.toggle('expanded')">
                     <div class="feed-header">
                         <span>From: {{ resp.sender }}</span>
                         <span>{{ resp.timestamp }}</span>
@@ -600,6 +616,9 @@
                     <div class="feed-subject">{{ resp.subject }}</div>
                     {% if resp.has_attachment %}
                     <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
+                    {% endif %}
+                    {% if resp.body %}
+                    <div class="feed-body">{{ resp.body | e }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}

@@ -79,9 +79,15 @@ def init_db():
             sender TEXT,
             has_attachment BOOLEAN,
             attachment_name TEXT,
+            body TEXT,
             FOREIGN KEY(request_id) REFERENCES requests(id)
         )
     ''')
+
+    try:
+        cursor.execute("ALTER TABLE responses ADD COLUMN body TEXT")
+    except sqlite3.OperationalError:
+        pass
     
     # Table for storing key-value settings
     cursor.execute('''
@@ -184,13 +190,13 @@ def log_request(status, record_type, recipient_email, subject, body_preview, cit
     conn.close()
     return req_id
 
-def log_response(subject, sender, has_attachment, attachment_name=""):
+def log_response(subject, sender, has_attachment, attachment_name="", body=""):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO responses (subject, sender, has_attachment, attachment_name)
-        VALUES (?, ?, ?, ?)
-    ''', (subject, sender, has_attachment, attachment_name))
+        INSERT INTO responses (subject, sender, has_attachment, attachment_name, body)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (subject, sender, has_attachment, attachment_name, body))
     conn.commit()
     conn.close()
 
