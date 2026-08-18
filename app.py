@@ -171,6 +171,15 @@ def trigger_request():
     
     return jsonify({"status": "success", "message": "Multi-City FOIA dispatch triggered."})
 
+@app.route("/api/test_batch", methods=["POST"])
+def test_batch_route():
+    data = request.get_json(silent=True) or {}
+    drafts_list = data.get("drafts", [])
+    custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d}
+    
+    res = send_all_foia_requests(custom_drafts=custom_drafts)
+    return jsonify(res)
+
 @app.route("/api/trigger_single", methods=["POST"])
 def trigger_single_request():
     data = request.get_json(silent=True) or {}

@@ -758,7 +758,7 @@
                 });
                 const data = await res.json();
                 showToast(data.message);
-                closePreviewModal();
+                closeModal();
                 setTimeout(refreshRequestsTable, 400);
                 setTimeout(() => {
                     if (btn) {
