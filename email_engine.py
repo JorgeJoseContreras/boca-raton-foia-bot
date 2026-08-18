@@ -403,8 +403,7 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            messages = server.search(['ALL'])
-            recent_uids = messages[-25:] if len(messages) > 25 else messages
+            recent_uids = server.search(['ALL'])
             
             logs = []
             for uid in reversed(recent_uids):
@@ -420,29 +419,49 @@ def check_inbox():
                 subject, encoding = decoded_list[0]
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
-                    
+                
                 sender = email_message.get("From", "").lower()
                 
                 has_attachment = False
                 attachment_name = ""
+                body_text = ""
                 
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         if part.get_content_maintype() == 'multipart':
                             continue
-                        if part.get('Content-Disposition') is None:
+                        content_disposition = part.get('Content-Disposition')
+                        content_type = part.get_content_type()
+                        if content_disposition is None and content_type == 'text/plain' and not body_text:
+                            try:
+                                charset = part.get_content_charset() or 'utf-8'
+                                payload = part.get_payload(decode=True)
+                                if payload is not None:
+                                    body_text = payload.decode(charset, errors='replace')
+                            except Exception:
+                                pass
+                            continue
+                        if content_disposition is None:
                             continue
                         filename = part.get_filename()
                         if filename:
                             has_attachment = True
                             attachment_name = filename
+                elif email_message.get_content_type() == 'text/plain':
+                    try:
+                        charset = email_message.get_content_charset() or 'utf-8'
+                        payload = email_message.get_payload(decode=True)
+                        if payload is not None:
+                            body_text = payload.decode(charset, errors='replace')
+                    except Exception:
+                        pass
                 
                 # Match sender against target emails/domains
                 is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
                 is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
                 
                 if is_target_sender or has_attachment or is_foia_related:
-                    log_response(subject, sender, has_attachment, attachment_name)
+                    log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
                     logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                     
                     # Notify via Telegram

@@ -21,8 +21,7 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            # Search for unread emails or emails from justfoia
-            messages = server.search(['UNSEEN'])
+            messages = server.search(['ALL'])
             
             logs = []
             for uid, message_data in server.fetch(messages, 'RFC822').items():
@@ -45,13 +44,13 @@ def check_inbox():
                             continue
                         content_disposition = part.get('Content-Disposition')
                         content_type = part.get_content_type()
-                        if content_disposition is None and content_type == 'text/plain':
+                        if content_disposition is None and content_type == 'text/plain' and not body_text:
                             try:
                                 charset = part.get_content_charset() or 'utf-8'
                                 body_text = part.get_payload(decode=True).decode(charset, errors='replace')
                             except Exception:
                                 pass
-                            break
+                            continue
                         if content_disposition is None:
                             continue
                         
@@ -70,7 +69,7 @@ def check_inbox():
                         except Exception:
                             pass
                 
-                log_response(subject, sender, has_attachment, attachment_name, body_text)
+                log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
                 logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                 
                 # Mark as read (uncomment for production)
