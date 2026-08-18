@@ -201,7 +201,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         f"Please transmit all electronic files and CSV/Excel data exports to email: jorge.property.123@gmail.com\n\n"
         f"If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
         f"Thank you for your assistance.\n\n"
-        f"Sincerely,\nJorge Contreras"
+        f"Sincerely,\nRecords Requestor"
     )
     
     subject_default = f"Florida Chapter 119 Public Records Request - Code Compliance & Demolition Lists - {city_name}"
@@ -235,7 +235,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
             f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
             f"Explicitly include instruction to deliver data exports to email: jorge.property.123@gmail.com\n"
             f"Explicitly include this cost cap estimate clause: 'If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.'\n"
-            f"Signed by Jorge Contreras.\n"
+            f"Signed by Records Requestor.\n"
             f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
         )
         

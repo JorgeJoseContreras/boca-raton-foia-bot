@@ -127,7 +127,7 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         can.drawString(405, 560, formatted_date)
         
         # 2. From (Sitting on underline after From: (Optional) )
-        can.drawString(135, 537, "Jorge Contreras")
+        can.drawString(135, 537, "Records Requestor")
         
         # 3. Phone (Optional) -> Omitted / left blank
         

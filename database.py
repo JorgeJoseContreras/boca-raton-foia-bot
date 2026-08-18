@@ -13,7 +13,7 @@ DEFAULT_TEMPLATE = (
     "If a different submission format, portal, or method of request is required by your office, please notify me at the above email address and I will comply promptly.\n\n"
     "If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
     "Thank you for your assistance.\n\n"
-    "Sincerely,\nJorge Contreras"
+    "Sincerely,\nRecords Requestor"
 )
 
 def get_connection():
@@ -133,6 +133,7 @@ def init_db():
         
     # Force update any custom template email address typos
     cursor.execute("UPDATE settings SET value = replace(value, 'jorge.properties.123@gmail.com', 'jorge.property.123@gmail.com') WHERE key = 'foia_template'")
+    cursor.execute("UPDATE settings SET value = replace(value, 'Jorge Contreras', 'Records Requestor') WHERE key = 'foia_template'")
 
     conn.commit()
     conn.close()
