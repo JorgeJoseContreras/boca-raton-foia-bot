@@ -146,8 +146,8 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         can.drawString(36, 338, "habitation as of " + formatted_date + ".")
         
         # --- Box 3: Demolition Permits ---
-        can.drawString(55, 298, "Demolition Permits: List of all demolition permits applied for, active, or completed between")
-        can.drawString(36, 276, "January 1, 2024 and " + formatted_date + ", including parcel ID, site address, and contractor/owner details.")
+        can.drawString(55, 298, "Demolition Permits: List of all demolition permits applied for, active, or completed in the last")
+        can.drawString(36, 276, "30 days, including parcel ID, site address, and contractor/owner details.")
         
         can.save()
         overlay_packet.seek(0)

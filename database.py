@@ -8,7 +8,7 @@ DEFAULT_TEMPLATE = (
     "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {city_name}, split across distinct departmental queries:\n\n"
     "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {date_of_request}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
     "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {date_of_request}.\n\n"
-    "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {date_of_request}, including parcel ID, site address, and contractor/owner details.\n\n"
+    "3. Demolition Permits: A list of all demolition permits applied for, active, or completed in the last 30 days, including parcel ID, site address, and contractor/owner details.\n\n"
     "Please transmit all electronic files and CSV/Excel exports to: jorge.property.123@gmail.com\n\n"
     "If a different submission format, portal, or method of request is required by your office, please notify me at the above email address and I will comply promptly.\n\n"
     "If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
@@ -127,7 +127,7 @@ def init_db():
     # Force update legacy default FOIA template to modern format with dynamic addressee & date placeholders
     cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
     t_row = cursor.fetchone()
-    if t_row and ("exceed $25.00" not in t_row[0] or "{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0] or "different submission format" not in t_row[0] or "Sincerely," in t_row[0] or "Records Requestor" in t_row[0] or "Jorge Contreras" in t_row[0]):
+    if t_row and ("exceed $25.00" not in t_row[0] or "{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0] or "different submission format" not in t_row[0] or "Sincerely," in t_row[0] or "Records Requestor" in t_row[0] or "Jorge Contreras" in t_row[0] or "{start_date}" in t_row[0] or "between January 1, 2024" in t_row[0]):
         cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
         
     # Force update any custom template email address typos
