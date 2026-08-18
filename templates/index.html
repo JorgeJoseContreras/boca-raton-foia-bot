@@ -620,7 +620,7 @@
                 <button class="btn btn-outline" onclick="loadPreview()">Regenerate</button>
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button class="btn" onclick="sendAllCustomEmails()">Send All Emails Now</button>
+                    <button class="btn" onclick="sendAllCustomEmails(this)">Send All Requests Now</button>
                 </div>
             </div>
         </div>
@@ -690,9 +690,10 @@
                 if (data.status === 'success' && data.drafts) {
                     let html = '';
                     data.drafts.forEach((d, idx) => {
+                        const isFax = d.recipient.startsWith('+');
                         html += `
                             <div class="draft-card" data-city="${d.city}">
-                                <div class="draft-card-header">${d.city} (${d.recipient})</div>
+                                <div class="draft-card-header">${d.city} — <span style="font-weight: normal; font-size: 13px; color: #555;">${isFax ? 'Fax' : 'Email'}: <code>${d.recipient}</code></span></div>
                                 <div class="form-group">
                                     <label>Subject Line</label>
                                     <input type="text" class="edit-subject" value="${d.subject.replace(/"/g, '&quot;')}">
