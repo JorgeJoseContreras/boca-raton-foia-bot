@@ -85,7 +85,8 @@ def settings_page():
     all_keys = [
         "use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency",
         "telnyx_fax_number", "telnyx_connection_id", "telnyx_api_key",
-        "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach", "fax_highland_beach", "fax_deerfield_beach"
+        "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach", "fax_highland_beach", "fax_deerfield_beach",
+        "fax_coral_springs", "fax_boynton_beach", "fax_pompano_beach", "fax_sea_ranch_lakes", "fax_lauderhill"
     ]
     settings = {k: get_setting(k, "") for k in all_keys}
     return render_template("settings.html", settings=settings)

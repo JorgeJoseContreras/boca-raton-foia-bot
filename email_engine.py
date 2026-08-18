@@ -23,7 +23,13 @@ TARGET_MUNICIPALITIES = [
     {"name": "City of Deerfield Beach", "email": "+18445421010", "type": "fax"},
     {"name": "City of Lighthouse Point", "email": "lhpadmin@lighthousepoint.com", "type": "email"},
     {"name": "City of Margate", "email": "recordsmanagement@margatefl.com", "type": "email"},
-    {"name": "Town of Gulf Stream", "email": "aghlc.nm@gmail.com", "type": "email"}
+    {"name": "Town of Gulf Stream", "email": "townclerk@gulf-stream.org", "type": "email"},
+    {"name": "City of Coral Springs", "email": "+19543441016", "type": "fax"},
+    {"name": "City of Boynton Beach", "email": "+15617426090", "type": "fax"},
+    {"name": "City of Pompano Beach", "email": "+19547864095", "type": "fax"},
+    {"name": "Village of Sea Ranch Lakes", "email": "+19549435808", "type": "fax"},
+    {"name": "City of Lauderhill", "email": "+19547303062", "type": "fax"},
+    {"name": "City of Fort Lauderdale", "email": "PropertyRecords@fortlauderdale.gov", "type": "email"}
 ]
 
 def send_telegram_notification(message):

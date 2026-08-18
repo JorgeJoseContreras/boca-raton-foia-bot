@@ -23,7 +23,12 @@ CITY_FAX_MAPPING = {
     "City of Parkland": "fax_parkland",
     "Town of Hillsboro Beach": "fax_hillsboro_beach",
     "Town of Highland Beach": "fax_highland_beach",
-    "City of Deerfield Beach": "fax_deerfield_beach"
+    "City of Deerfield Beach": "fax_deerfield_beach",
+    "City of Coral Springs": "fax_coral_springs",
+    "City of Boynton Beach": "fax_boynton_beach",
+    "City of Pompano Beach": "fax_pompano_beach",
+    "Village of Sea Ranch Lakes": "fax_sea_ranch_lakes",
+    "City of Lauderhill": "fax_lauderhill"
 }
 
 def get_city_fax_number(city_name):
@@ -40,7 +45,12 @@ def get_city_fax_number(city_name):
         "City of Parkland": "+19547538838",
         "Town of Hillsboro Beach": "+18445421010",
         "Town of Highland Beach": "+18445421010",
-        "City of Deerfield Beach": "+18445421010"
+        "City of Deerfield Beach": "+18445421010",
+        "City of Coral Springs": "+19543441016",
+        "City of Boynton Beach": "+15617426090",
+        "City of Pompano Beach": "+19547864095",
+        "Village of Sea Ranch Lakes": "+19549435808",
+        "City of Lauderhill": "+19547303062"
     }
     return defaults.get(city_name, "")
 

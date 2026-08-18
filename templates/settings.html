@@ -293,6 +293,26 @@
                 <label for="faxDeerfieldBeach">City of Deerfield Beach Fax Number</label>
                 <input type="text" id="faxDeerfieldBeach" value="{{ settings.fax_deerfield_beach or '+18445421010' }}">
             </div>
+            <div class="form-group">
+                <label for="faxCoralSprings">City of Coral Springs Fax Number</label>
+                <input type="text" id="faxCoralSprings" value="{{ settings.fax_coral_springs or '+19543441016' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxBoyntonBeach">City of Boynton Beach Fax Number</label>
+                <input type="text" id="faxBoyntonBeach" value="{{ settings.fax_boynton_beach or '+15617426090' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxPompanoBeach">City of Pompano Beach Fax Number</label>
+                <input type="text" id="faxPompanoBeach" value="{{ settings.fax_pompano_beach or '+19547864095' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxSeaRanchLakes">Village of Sea Ranch Lakes Fax Number</label>
+                <input type="text" id="faxSeaRanchLakes" value="{{ settings.fax_sea_ranch_lakes or '+19549435808' }}">
+            </div>
+            <div class="form-group">
+                <label for="faxLauderhill">City of Lauderhill Fax Number</label>
+                <input type="text" id="faxLauderhill" value="{{ settings.fax_lauderhill or '+19547303062' }}">
+            </div>
         </div>
 
         <div class="card" style="border-color: #fecaca; background: #fffbfb;">
@@ -351,6 +371,11 @@
             const fax_hillsboro = document.getElementById('faxHillsboroBeach').value;
             const fax_highland = document.getElementById('faxHighlandBeach').value;
             const fax_deerfield = document.getElementById('faxDeerfieldBeach').value;
+            const fax_coral = document.getElementById('faxCoralSprings').value;
+            const fax_boynton = document.getElementById('faxBoyntonBeach').value;
+            const fax_pompano = document.getElementById('faxPompanoBeach').value;
+            const fax_sea = document.getElementById('faxSeaRanchLakes').value;
+            const fax_lauderhill = document.getElementById('faxLauderhill').value;
 
             try {
                 const res = await fetch('/api/settings', {
@@ -371,7 +396,12 @@
                         fax_parkland: fax_parkland,
                         fax_hillsboro_beach: fax_hillsboro,
                         fax_highland_beach: fax_highland,
-                        fax_deerfield_beach: fax_deerfield
+                        fax_deerfield_beach: fax_deerfield,
+                        fax_coral_springs: fax_coral,
+                        fax_boynton_beach: fax_boynton,
+                        fax_pompano_beach: fax_pompano,
+                        fax_sea_ranch_lakes: fax_sea,
+                        fax_lauderhill: fax_lauderhill
                     })
                 });
                 const data = await res.json();

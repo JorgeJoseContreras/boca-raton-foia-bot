@@ -102,6 +102,11 @@ def init_db():
         "fax_hillsboro_beach": "+18445421010",
         "fax_highland_beach": "+18445421010",
         "fax_deerfield_beach": "+18445421010",
+        "fax_coral_springs": "+19543441016",
+        "fax_boynton_beach": "+15617426090",
+        "fax_pompano_beach": "+19547864095",
+        "fax_sea_ranch_lakes": "+19549435808",
+        "fax_lauderhill": "+19547303062",
         "telnyx_fax_number": "+17624752325"
     }
     
