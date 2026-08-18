@@ -455,7 +455,7 @@ def check_inbox():
                     if len(inbox_uids) > RECENT_INBOX_BACKFILL_WINDOW
                     else inbox_uids
                 )
-                message_uids = sorted(set(new_message_uids + recent_window_uids))
+                message_uids = sorted(set(new_message_uids + recent_window_uids), key=int)
             else:
                 message_uids = inbox_uids
             
