@@ -264,10 +264,6 @@
             border-radius: 4px;
             padding: 10px 14px;
             margin-bottom: 10px;
-            cursor: default;
-        }
-
-        .feed-item-collapsible {
             cursor: pointer;
         }
 
@@ -612,7 +608,7 @@
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
-                <div class="feed-item{% if resp.body %} feed-item-collapsible{% endif %}"{% if resp.body %} onclick="this.classList.toggle('expanded')"{% endif %}>
+                <div class="feed-item" onclick="this.classList.toggle('expanded')">
                     <div class="feed-header">
                         <span>From: {{ resp.sender }}</span>
                         <span>{{ resp.timestamp }}</span>
@@ -621,9 +617,7 @@
                     {% if resp.has_attachment %}
                     <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
                     {% endif %}
-                    {% if resp.body %}
-                    <div class="feed-body">{{ resp.body | e }}</div>
-                    {% endif %}
+                    <div class="feed-body">{% if resp.body %}{{ resp.body | e }}{% else %}<em style="color: #666;">No message body captured yet. Click “Check Inbox for Replies” to refresh this entry.</em>{% endif %}</div>
                 </div>
                 {% endfor %}
             {% else %}

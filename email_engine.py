@@ -30,6 +30,25 @@ def _extract_text_from_html(html_content):
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 
+
+def _decode_message_part(part):
+    charset = part.get_content_charset() or 'utf-8'
+    payload = part.get_payload(decode=True)
+    if payload is None:
+        raw_payload = part.get_payload()
+        if isinstance(raw_payload, str):
+            return raw_payload
+        if isinstance(raw_payload, bytes):
+            payload = raw_payload
+    if payload is None:
+        return ""
+    if isinstance(payload, str):
+        return payload
+    try:
+        return payload.decode(charset, errors='replace')
+    except Exception:
+        return payload.decode('utf-8', errors='replace')
+
 TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
     {"name": "City of Coconut Creek", "email": "publicrecords@coconutcreek.net", "type": "email"},
@@ -460,47 +479,26 @@ def check_inbox():
                         if part.get_content_maintype() == 'multipart':
                             continue
                         content_disposition = part.get('Content-Disposition')
+                        disposition = (content_disposition or "").lower()
                         content_type = part.get_content_type()
-                        if content_disposition is None and content_type == 'text/plain' and not body_text:
-                            try:
-                                charset = part.get_content_charset() or 'utf-8'
-                                payload = part.get_payload(decode=True)
-                                if payload is not None:
-                                    body_text = payload.decode(charset, errors='replace')
-                            except Exception:
-                                pass
-                            continue
-                        if content_disposition is None and content_type == 'text/html' and not html_body:
-                            try:
-                                charset = part.get_content_charset() or 'utf-8'
-                                payload = part.get_payload(decode=True)
-                                if payload is not None:
-                                    html_body = payload.decode(charset, errors='replace')
-                            except Exception:
-                                pass
-                            continue
-                        if content_disposition is None:
-                            continue
                         filename = part.get_filename()
+                        is_attachment = bool(filename) or ("attachment" in disposition)
+
+                        if not is_attachment and content_type == 'text/plain' and not body_text:
+                            body_text = _decode_message_part(part)
+                            continue
+                        if not is_attachment and content_type == 'text/html' and not html_body:
+                            html_body = _decode_message_part(part)
+                            continue
+                        if not is_attachment:
+                            continue
                         if filename:
                             has_attachment = True
                             attachment_name = filename
                 elif email_message.get_content_type() == 'text/plain':
-                    try:
-                        charset = email_message.get_content_charset() or 'utf-8'
-                        payload = email_message.get_payload(decode=True)
-                        if payload is not None:
-                            body_text = payload.decode(charset, errors='replace')
-                    except Exception:
-                        pass
+                    body_text = _decode_message_part(email_message)
                 elif email_message.get_content_type() == 'text/html':
-                    try:
-                        charset = email_message.get_content_charset() or 'utf-8'
-                        payload = email_message.get_payload(decode=True)
-                        if payload is not None:
-                            html_body = payload.decode(charset, errors='replace')
-                    except Exception:
-                        pass
+                    html_body = _decode_message_part(email_message)
 
                 if not body_text and html_body:
                     body_text = _extract_text_from_html(html_body)
