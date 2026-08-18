@@ -490,8 +490,8 @@ def check_inbox():
                             continue
                         if not is_attachment:
                             continue
+                        has_attachment = True
                         if filename:
-                            has_attachment = True
                             attachment_name = filename
                 elif email_message.get_content_type() == 'text/plain':
                     body_text = _decode_message_part(email_message)
