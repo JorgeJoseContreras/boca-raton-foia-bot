@@ -34,15 +34,25 @@ def check_inbox():
                     
                 sender = email_message.get("From", "")
                 
-                # Check for attachments
+                # Check for attachments and extract body
                 has_attachment = False
                 attachment_name = ""
+                body_text = ""
                 
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         if part.get_content_maintype() == 'multipart':
                             continue
-                        if part.get('Content-Disposition') is None:
+                        content_disposition = part.get('Content-Disposition')
+                        content_type = part.get_content_type()
+                        if content_disposition is None and content_type == 'text/plain':
+                            try:
+                                charset = part.get_content_charset() or 'utf-8'
+                                body_text = part.get_payload(decode=True).decode(charset, errors='replace')
+                            except Exception:
+                                pass
+                            continue
+                        if content_disposition is None:
                             continue
                         
                         filename = part.get_filename()
@@ -52,8 +62,15 @@ def check_inbox():
                             if filename.endswith(('.csv', '.xlsx', '.xls')):
                                 # We can process or download it here if needed
                                 pass
+                else:
+                    if email_message.get_content_type() == 'text/plain':
+                        try:
+                            charset = email_message.get_content_charset() or 'utf-8'
+                            body_text = email_message.get_payload(decode=True).decode(charset, errors='replace')
+                        except Exception:
+                            pass
                 
-                log_response(subject, sender, has_attachment, attachment_name)
+                log_response(subject, sender, has_attachment, attachment_name, body_text)
                 logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                 
                 # Mark as read (uncomment for production)
