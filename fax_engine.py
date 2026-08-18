@@ -237,7 +237,7 @@ def generate_foia_pdf(subject, body, output_path):
             
     doc.build(story)
 
-def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None, custom_body=None):
+def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None, custom_body=None, batch_id=None):
     """
     Sends a FOIA Request via Telnyx Fax API.
     """
@@ -262,16 +262,16 @@ def send_single_foia_fax(city_name, target_fax_number=None, custom_subject=None,
         
     if not api_key:
         msg = "Telnyx API Key (TELNYX_API_KEY) missing. Configure in Render env vars or App Settings."
-        log_request("Failed", "Fax Request", target_fax_number or "N/A", subject, msg, city_name=city_name)
+        log_request("Failed", "Fax Request", target_fax_number or "N/A", subject, msg, city_name=city_name, batch_id=batch_id)
         return {"status": "error", "message": msg, "city": city_name}
 
     if not target_fax_number:
         msg = f"No Fax number configured for {city_name}."
-        log_request("Failed", "Fax Request", "N/A", subject, msg, city_name=city_name)
+        log_request("Failed", "Fax Request", "N/A", subject, msg, city_name=city_name, batch_id=batch_id)
         return {"status": "error", "message": msg, "city": city_name}
 
     # 1. Log in progress immediately
-    req_id = log_request("Sending...", "Fax Request", target_fax_number or "N/A", subject, "Generating PDF & initiating fax call...", city_name=city_name)
+    req_id = log_request("Sending...", "Fax Request", target_fax_number or "N/A", subject, "Generating PDF & initiating fax call...", city_name=city_name, batch_id=batch_id)
 
     try:
         pdf_id = str(uuid.uuid4())

@@ -437,12 +437,12 @@
                 <button onclick="toggleDirectoryTable(this)" title="Collapse / Expand" style="background: none; border: none; cursor: pointer; font-size: 16px; color: #555; padding: 0 4px; line-height: 1;" aria-label="Toggle directory table">&#9660;</button>
             </div>
             <div id="directoryTableWrapper">
-            <table class="directory-table">
+            <table class="directory-table" id="dirTable">
                 <thead>
                     <tr>
-                        <th style="width: 250px;">Municipality Name</th>
-                        <th style="min-width: 320px;">Records Custodian Email / Fax</th>
-                        <th style="width: 220px;">Requested Data Format</th>
+                        <th style="width: 250px; cursor: pointer; user-select: none;" onclick="sortDirTable(0, this)">Municipality Name <span class="sort-icon">⇅</span></th>
+                        <th style="min-width: 320px; cursor: pointer; user-select: none;" onclick="sortDirTable(1, this)">Records Custodian Email / Fax <span class="sort-icon">⇅</span></th>
+                        <th style="width: 220px; cursor: pointer; user-select: none;" onclick="sortDirTable(2, this)">Requested Data Format <span class="sort-icon">⇅</span></th>
                         <th style="width: 100px; text-align: center;">Action</th>
                     </tr>
                 </thead>
@@ -468,8 +468,8 @@
             <div class="section-title" style="margin: 0; border: none; padding: 0;">Outgoing Requests Log Across All Cities</div>
             <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="clearRequestLog()">Clear Log</button>
         </div>
-        {% if requests %}
-        <table class="data-table">
+        {% if request_groups %}
+        <table class="data-table" id="logTable">
             <thead>
                 <tr>
                     <th style="width: 35px; text-align: center;">#</th>
@@ -483,7 +483,65 @@
                 </tr>
             </thead>
             <tbody>
-                {% for req in requests %}
+                {% for grp in request_groups %}
+                {% if grp.is_bulk %}
+                <!-- Bulk batch summary row -->
+                <tr class="bulk-summary-row" onclick="toggleBatch('{{ grp.batch_id }}')" style="cursor: pointer; background: #f0f7ff;">
+                    <td style="text-align: center; color: #555;">
+                        <span id="arrow-{{ grp.batch_id }}" style="font-size: 14px;">&#9660;</span>
+                    </td>
+                    <td><span style="font-weight: 500;">{{ grp.timestamp }}</span></td>
+                    <td><strong>Bulk Dispatch — {{ grp.count }} Municipalities</strong></td>
+                    <td>
+                        {% set bs = grp.bulk_status|lower %}
+                        {% if 'sending' in bs %}
+                            <span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>
+                        {% elif bs == 'sent' %}
+                            <span class="status-badge status-sent">{{ grp.sent }} Sent</span>
+                        {% elif 'failed' in bs and grp.sent == 0 %}
+                            <span class="status-badge status-failed">Failed</span>
+                        {% else %}
+                            <span class="status-badge status-sent" style="background:#dcfce7;color:#15803d;border-color:#bbf7d0;">{{ grp.sent }} Sent{% if grp.failed %} / {{ grp.failed }} Failed{% endif %}</span>
+                        {% endif %}
+                    </td>
+                    <td colspan="4" style="color: #666; font-size: 12px;">Click to expand individual city results</td>
+                </tr>
+                <!-- Bulk batch child rows -->
+                {% for req in grp.items %}
+                <tr class="bulk-child-row" data-batch="{{ grp.batch_id }}" style="display: none; background: #f8fbff;">
+                    <td style="text-align: center; color: #aaa; font-size: 11px; padding-left: 24px;">↳</td>
+                    <td><span style="font-size: 12px; color: #555;">{{ req.timestamp }}</span></td>
+                    <td><strong>{{ req.city_name or 'City of Boca Raton' }}</strong></td>
+                    <td>
+                        {% if req.status|lower == 'sending...' or req.status|lower == 'sending' %}
+                            <span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>
+                        {% elif req.status|lower == 'sent' %}
+                            <span class="status-badge status-sent">Sent</span>
+                        {% elif req.status|lower == 'delivered' %}
+                            <span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>
+                        {% elif req.status|lower == 'failed' %}
+                            <span class="status-badge status-failed">Failed</span>
+                        {% else %}
+                            <span class="status-badge">{{ req.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ req.recipient_email }}</code></td>
+                    <td>{{ req.subject }}</td>
+                    <td style="color: #555;">{{ req.body_preview }}</td>
+                    <td style="text-align: center;">
+                        {% if req.pdf_id %}
+                            <a href="/api/fax/pdf/{{ req.pdf_id }}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>
+                        {% elif req.recipient_email.startswith('+') or 'Fax' in req.record_type or 'Fax ID:' in req.body_preview %}
+                            <span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>
+                        {% else %}
+                            <span style="font-size: 11px; color: #888;">Email</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <!-- Single send row -->
+                {% set req = grp.items[0] %}
                 <tr>
                     <td>{{ req.id }}</td>
                     <td><span style="font-weight: 500;">{{ req.timestamp }}</span></td>
@@ -514,6 +572,7 @@
                         {% endif %}
                     </td>
                 </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
@@ -587,6 +646,31 @@
             wrapper.style.display = collapsed ? '' : 'none';
             btn.innerHTML = collapsed ? '&#9660;' : '&#9650;';
             btn.title = collapsed ? 'Collapse' : 'Expand';
+        }
+
+        function sortDirTable(colIdx, th) {
+            const table = document.getElementById('dirTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const asc = th.dataset.sortDir !== 'asc';
+            th.dataset.sortDir = asc ? 'asc' : 'desc';
+            // Reset all sort icons
+            table.querySelectorAll('th .sort-icon').forEach(s => s.textContent = '⇅');
+            th.querySelector('.sort-icon').textContent = asc ? '▲' : '▼';
+            rows.sort((a, b) => {
+                const aText = (a.cells[colIdx]?.innerText || '').trim().toLowerCase();
+                const bText = (b.cells[colIdx]?.innerText || '').trim().toLowerCase();
+                return asc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        function toggleBatch(batchId) {
+            const children = document.querySelectorAll(`.bulk-child-row[data-batch="${batchId}"]`);
+            const arrow = document.getElementById(`arrow-${batchId}`);
+            const isHidden = children.length > 0 && children[0].style.display === 'none';
+            children.forEach(r => r.style.display = isHidden ? '' : 'none');
+            if (arrow) arrow.innerHTML = isHidden ? '&#9650;' : '&#9660;';
         }
 
         async function openPreviewModal() {

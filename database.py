@@ -46,6 +46,11 @@ def init_db():
         cursor.execute("ALTER TABLE requests ADD COLUMN pdf_id TEXT")
     except sqlite3.OperationalError:
         pass
+
+    try:
+        cursor.execute("ALTER TABLE requests ADD COLUMN batch_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     
     # Table for tracking archived / cleared FOIA requests
     cursor.execute('''
@@ -165,13 +170,13 @@ def format_eastern_timestamp(ts):
     except Exception:
         return str(ts)
 
-def log_request(status, record_type, recipient_email, subject, body_preview, city_name="City of Boca Raton", pdf_id=None):
+def log_request(status, record_type, recipient_email, subject, body_preview, city_name="City of Boca Raton", pdf_id=None, batch_id=None):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id))
+        INSERT INTO requests (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id, batch_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (status, record_type, recipient_email, subject, body_preview, city_name, pdf_id, batch_id))
     conn.commit()
     req_id = cursor.lastrowid
     conn.close()

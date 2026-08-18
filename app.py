@@ -64,14 +64,54 @@ atexit.register(lambda: scheduler.shutdown())
 
 @app.route("/")
 def index():
-    requests = get_all_requests()
+    raw_requests = get_all_requests()
     responses = get_all_responses()
     schedule_freq = get_setting("schedule_frequency", "off")
     next_run = get_next_run_time()
     sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
+
+    # Group requests: bulk batches become one group; single sends stay solo
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for req in raw_requests:
+        bid = req.get("batch_id") or f"solo_{req['id']}"
+        if bid not in groups:
+            groups[bid] = []
+        groups[bid].append(req)
+
+    # Build a list of group dicts for the template
+    request_groups = []
+    for bid, items in groups.items():
+        is_bulk = len(items) > 1 and not bid.startswith("solo_")
+        sent = sum(1 for r in items if r.get("status", "").lower() == "sent")
+        failed = sum(1 for r in items if r.get("status", "").lower() == "failed")
+        sending = sum(1 for r in items if "sending" in r.get("status", "").lower())
+        if is_bulk:
+            if sending > 0:
+                bulk_status = "Sending"
+            elif failed > 0 and sent == 0:
+                bulk_status = "Failed"
+            elif failed > 0:
+                bulk_status = f"{sent} Sent / {failed} Failed"
+            else:
+                bulk_status = "Sent"
+        else:
+            bulk_status = items[0].get("status", "")
+        request_groups.append({
+            "batch_id": bid,
+            "is_bulk": is_bulk,
+            "items": items,
+            "count": len(items),
+            "sent": sent,
+            "failed": failed,
+            "bulk_status": bulk_status,
+            "timestamp": items[0].get("timestamp", ""),
+        })
+
     return render_template(
         "index.html",
-        requests=requests,
+        requests=raw_requests,
+        request_groups=request_groups,
         responses=responses,
         schedule_freq=schedule_freq,
         next_run_time=next_run,

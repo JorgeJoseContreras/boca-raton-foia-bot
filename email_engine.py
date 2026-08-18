@@ -255,7 +255,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         print(f"Error generating content via Gemini API for {city_name}: {e}")
         return subject_default, standard_body
 
-def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None):
+def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None):
     """
     Sends an email via SMTP to a specific municipality target.
     """
@@ -265,7 +265,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
     
     if not sender_email or not sender_password:
         msg = "SMTP Credentials not configured (SENDER_EMAIL or SENDER_PASSWORD missing)."
-        log_request("Failed", "Email Request", target_email, "N/A", msg, city_name=city_name)
+        log_request("Failed", "Email Request", target_email, "N/A", msg, city_name=city_name, batch_id=batch_id)
         return {"status": "error", "message": msg, "city": city_name}
 
     if custom_subject and custom_body:
@@ -274,7 +274,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
         subject, body = generate_foia_content(city_name=city_name)
     
     # 1. Log in progress immediately
-    req_id = log_request("Sending...", "Email Request", target_email, subject, "Preparing transmission...", city_name=city_name)
+    req_id = log_request("Sending...", "Email Request", target_email, subject, "Preparing transmission...", city_name=city_name, batch_id=batch_id)
     
     try:
         msg = MIMEMultipart()
@@ -307,7 +307,9 @@ def send_all_foia_requests(custom_drafts=None):
     Hillsboro Beach is routed via Telnyx Fax API to +19544274834; others via Email.
     """
     from fax_engine import send_single_foia_fax
+    import uuid
     
+    batch_id = str(uuid.uuid4())
     results = []
     total = len(TARGET_MUNICIPALITIES)
     
@@ -327,9 +329,9 @@ def send_all_foia_requests(custom_drafts=None):
         if dispatch_type == "fax":
             from fax_engine import get_city_fax_number
             fax_num = get_city_fax_number(city) or addr
-            res = send_single_foia_fax(city, target_fax_number=fax_num, custom_subject=custom_sub, custom_body=custom_bdy)
+            res = send_single_foia_fax(city, target_fax_number=fax_num, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id)
         else:
-            res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy)
+            res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id)
             
         results.append(res)
         
@@ -342,7 +344,7 @@ def send_all_foia_requests(custom_drafts=None):
     # Telegram summary alert
     send_telegram_notification(f"<b>Multi-City FOIA Dispatch Complete</b>\nDispatched to <b>{sent_count}/{total}</b> municipalities.")
     
-    return {"status": "success", "dispatched": sent_count, "total": total, "results": results}
+    return {"status": "success", "dispatched": sent_count, "total": total, "results": results, "batch_id": batch_id}
 
 # Backwards compatibility wrapper
 def send_foia_email(custom_subject=None, custom_body=None, custom_recipient=None):
