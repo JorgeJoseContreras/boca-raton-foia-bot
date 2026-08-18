@@ -99,9 +99,9 @@ def init_db():
         "fax_delray_beach": "+15612437199",
         "fax_coconut_creek": "+19549736770",
         "fax_parkland": "+19547538838",
-        "fax_hillsboro_beach": "+18445421010",
-        "fax_highland_beach": "+18445421010",
-        "fax_deerfield_beach": "+18445421010",
+        "fax_hillsboro_beach": "+19544274834",
+        "fax_highland_beach": "+15612653582",
+        "fax_deerfield_beach": "+19544804323",
         "fax_coral_springs": "+19543441016",
         "fax_boynton_beach": "+15617426090",
         "fax_pompano_beach": "+19547864095",
@@ -114,10 +114,10 @@ def init_db():
     for key, val in defaults.items():
         cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (key, val))
         
-    # Force update legacy default Hillsboro, Highland Beach, and Deerfield Beach fax numbers to +18445421010
-    cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_hillsboro_beach' AND (value = '+19544274027' OR value = '+19544274834')")
-    cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_highland_beach' AND value = '+15612653582'")
-    cursor.execute("UPDATE settings SET value = '+18445421010' WHERE key = 'fax_deerfield_beach' AND value = '+19544804323'")
+    # Force update routing fax numbers back to their original numbers
+    cursor.execute("UPDATE settings SET value = '+19544274834' WHERE key = 'fax_hillsboro_beach' AND value = '+18445421010'")
+    cursor.execute("UPDATE settings SET value = '+15612653582' WHERE key = 'fax_highland_beach' AND value = '+18445421010'")
+    cursor.execute("UPDATE settings SET value = '+19544804323' WHERE key = 'fax_deerfield_beach' AND value = '+18445421010'")
     
     # Force update legacy default FOIA template to modern format with dynamic addressee & date placeholders
     cursor.execute("SELECT value FROM settings WHERE key = 'foia_template'")
