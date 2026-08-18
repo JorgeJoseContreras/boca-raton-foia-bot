@@ -416,6 +416,9 @@
                         <option value="biweekly" {% if schedule_freq == 'biweekly' %}selected{% endif %}>Bi-weekly (Every 14d)</option>
                         <option value="monthly" {% if schedule_freq == 'monthly' %}selected{% endif %}>Monthly (Every 30d)</option>
                     </select>
+                    {% if schedule_freq != 'off' and next_run_time %}
+                    <span style="font-size: 11px; color: #137333; font-weight: 600; white-space: nowrap; background: #e6f4ea; border: 1px solid #b7e1cd; border-radius: 4px; padding: 3px 8px;">Next: {{ next_run_time }}</span>
+                    {% endif %}
                 </div>
                 <button class="btn" id="runAutoBtn" onclick="runAutomationClicked(this)">Run Automation Now</button>
             </div>
