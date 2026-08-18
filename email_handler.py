@@ -2,7 +2,7 @@ import os
 from imapclient import IMAPClient
 import email
 from email.header import decode_header
-from database import log_response
+from database import get_setting, log_response, set_setting
 
 def check_inbox():
     """
@@ -21,8 +21,18 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            # Search for unread emails or emails from justfoia
-            messages = server.search(['UNSEEN'])
+            inbox_uids = server.search(['ALL'])
+            history_backfilled = (get_setting("imap_history_backfilled", "false") or "false").lower() == "true"
+            last_scanned_uid_raw = get_setting("imap_last_scanned_uid", "0") or "0"
+            try:
+                last_scanned_uid = int(last_scanned_uid_raw)
+            except (TypeError, ValueError):
+                last_scanned_uid = 0
+
+            if history_backfilled:
+                messages = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+            else:
+                messages = inbox_uids
             
             logs = []
             for uid, message_data in server.fetch(messages, 'RFC822').items():
@@ -45,13 +55,13 @@ def check_inbox():
                             continue
                         content_disposition = part.get('Content-Disposition')
                         content_type = part.get_content_type()
-                        if content_disposition is None and content_type == 'text/plain':
+                        if content_disposition is None and content_type == 'text/plain' and not body_text:
                             try:
                                 charset = part.get_content_charset() or 'utf-8'
                                 body_text = part.get_payload(decode=True).decode(charset, errors='replace')
                             except Exception:
                                 pass
-                            break
+                            continue
                         if content_disposition is None:
                             continue
                         
@@ -70,12 +80,17 @@ def check_inbox():
                         except Exception:
                             pass
                 
-                log_response(subject, sender, has_attachment, attachment_name, body_text)
+                log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
                 logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                 
                 # Mark as read (uncomment for production)
                 # server.add_flags(uid, ['\\Seen'])
                 
+            if inbox_uids:
+                set_setting("imap_last_scanned_uid", str(max(int(uid) for uid in inbox_uids)))
+            if not history_backfilled:
+                set_setting("imap_history_backfilled", "true")
+
         return {"status": "success", "count": len(logs), "logs": logs}
         
     except Exception as e:

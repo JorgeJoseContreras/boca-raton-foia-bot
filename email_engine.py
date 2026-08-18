@@ -11,7 +11,7 @@ import json
 import traceback
 import requests
 
-from database import log_request, log_response, update_request_by_id
+from database import get_setting, log_request, log_response, set_setting, update_request_by_id
 
 TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
@@ -403,11 +403,21 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            messages = server.search(['ALL'])
-            recent_uids = messages[-25:] if len(messages) > 25 else messages
+            inbox_uids = server.search(['ALL'])
+            history_backfilled = (get_setting("imap_history_backfilled", "false") or "false").lower() == "true"
+            last_scanned_uid_raw = get_setting("imap_last_scanned_uid", "0") or "0"
+            try:
+                last_scanned_uid = int(last_scanned_uid_raw)
+            except (TypeError, ValueError):
+                last_scanned_uid = 0
+
+            if history_backfilled:
+                message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+            else:
+                message_uids = inbox_uids
             
             logs = []
-            for uid in reversed(recent_uids):
+            for uid in reversed(message_uids):
                 fetch_data = server.fetch([uid], 'RFC822')
                 if not fetch_data or uid not in fetch_data:
                     continue
@@ -420,34 +430,59 @@ def check_inbox():
                 subject, encoding = decoded_list[0]
                 if isinstance(subject, bytes):
                     subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
-                    
+                
                 sender = email_message.get("From", "").lower()
                 
                 has_attachment = False
                 attachment_name = ""
+                body_text = ""
                 
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         if part.get_content_maintype() == 'multipart':
                             continue
-                        if part.get('Content-Disposition') is None:
+                        content_disposition = part.get('Content-Disposition')
+                        content_type = part.get_content_type()
+                        if content_disposition is None and content_type == 'text/plain' and not body_text:
+                            try:
+                                charset = part.get_content_charset() or 'utf-8'
+                                payload = part.get_payload(decode=True)
+                                if payload is not None:
+                                    body_text = payload.decode(charset, errors='replace')
+                            except Exception:
+                                pass
+                            continue
+                        if content_disposition is None:
                             continue
                         filename = part.get_filename()
                         if filename:
                             has_attachment = True
                             attachment_name = filename
+                elif email_message.get_content_type() == 'text/plain':
+                    try:
+                        charset = email_message.get_content_charset() or 'utf-8'
+                        payload = email_message.get_payload(decode=True)
+                        if payload is not None:
+                            body_text = payload.decode(charset, errors='replace')
+                    except Exception:
+                        pass
                 
                 # Match sender against target emails/domains
                 is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
                 is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
                 
                 if is_target_sender or has_attachment or is_foia_related:
-                    log_response(subject, sender, has_attachment, attachment_name)
+                    log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
                     logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                     
                     # Notify via Telegram
                     attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
                     send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
+
+            if inbox_uids:
+                set_setting("imap_last_scanned_uid", str(max(int(uid) for uid in inbox_uids)))
+            if not history_backfilled:
+                set_setting("imap_history_backfilled", "true")
                 
         return {"status": "success", "count": len(logs), "logs": logs}
         

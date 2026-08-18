@@ -79,15 +79,26 @@ def init_db():
             sender TEXT,
             has_attachment BOOLEAN,
             attachment_name TEXT,
+            imap_uid TEXT,
             body TEXT,
             FOREIGN KEY(request_id) REFERENCES requests(id)
         )
     ''')
 
     try:
+        cursor.execute("ALTER TABLE responses ADD COLUMN imap_uid TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
         cursor.execute("ALTER TABLE responses ADD COLUMN body TEXT")
     except sqlite3.OperationalError:
         pass
+
+    cursor.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_imap_uid "
+        "ON responses(imap_uid) WHERE imap_uid IS NOT NULL"
+    )
     
     # Table for storing key-value settings
     cursor.execute('''
@@ -190,15 +201,102 @@ def log_request(status, record_type, recipient_email, subject, body_preview, cit
     conn.close()
     return req_id
 
-def log_response(subject, sender, has_attachment, attachment_name="", body=""):
+def log_response(subject, sender, has_attachment, attachment_name="", body="", imap_uid=None):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO responses (subject, sender, has_attachment, attachment_name, body)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (subject, sender, has_attachment, attachment_name, body))
+    normalized_uid = str(imap_uid).strip() if imap_uid is not None and str(imap_uid).strip() else None
+    normalized_attachment = attachment_name or ""
+
+    if normalized_uid:
+        cursor.execute(
+            '''
+            SELECT id
+            FROM responses
+            WHERE imap_uid = ?
+            LIMIT 1
+            ''',
+            (normalized_uid,)
+        )
+        existing = cursor.fetchone()
+
+        if existing:
+            cursor.execute(
+                '''
+                UPDATE responses
+                SET subject = ?,
+                    sender = ?,
+                    has_attachment = ?,
+                    attachment_name = ?,
+                    body = CASE
+                        WHEN COALESCE(body, '') = '' AND ? != '' THEN ?
+                        ELSE body
+                    END
+                WHERE id = ?
+                ''',
+                (subject, sender, has_attachment, normalized_attachment, body or "", body or "", existing[0])
+            )
+            conn.commit()
+            conn.close()
+            return existing[0]
+
+        cursor.execute(
+            '''
+            SELECT id
+            FROM responses
+            WHERE imap_uid IS NULL
+              AND subject = ?
+              AND sender = ?
+              AND has_attachment = ?
+              AND COALESCE(attachment_name, '') = ?
+              AND COALESCE(body, '') = ''
+            ORDER BY id DESC
+            LIMIT 2
+            ''',
+            (subject, sender, has_attachment, normalized_attachment)
+        )
+        legacy_matches = cursor.fetchall()
+
+        if len(legacy_matches) == 1:
+            cursor.execute(
+                '''
+                UPDATE responses
+                SET imap_uid = ?,
+                    subject = ?,
+                    sender = ?,
+                    has_attachment = ?,
+                    attachment_name = ?,
+                    body = CASE
+                        WHEN ? != '' THEN ?
+                        ELSE body
+                    END
+                WHERE id = ?
+                ''',
+                (
+                    normalized_uid,
+                    subject,
+                    sender,
+                    has_attachment,
+                    normalized_attachment,
+                    body or "",
+                    body or "",
+                    legacy_matches[0][0],
+                )
+            )
+            conn.commit()
+            conn.close()
+            return legacy_matches[0][0]
+
+    cursor.execute(
+        '''
+        INSERT INTO responses (subject, sender, has_attachment, attachment_name, imap_uid, body)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ''',
+        (subject, sender, has_attachment, normalized_attachment, normalized_uid, body)
+    )
     conn.commit()
+    response_id = cursor.lastrowid
     conn.close()
+    return response_id
 
 def update_request_by_id(req_id, status=None, body_preview=None, subject=None, pdf_id=None):
     if not req_id:
