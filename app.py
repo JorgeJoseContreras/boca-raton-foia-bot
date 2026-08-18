@@ -68,7 +68,7 @@ def index():
     responses = get_all_responses()
     schedule_freq = get_setting("schedule_frequency", "off")
     next_run = get_next_run_time()
-    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
     return render_template(
         "index.html",
         requests=requests,
@@ -173,7 +173,7 @@ def clear_logs_endpoint():
 @app.route("/archive")
 def archive_page():
     archived_logs = get_archived_requests()
-    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
     return render_template("archive.html", archived_logs=archived_logs, sender_email=sender_email)
 
 @app.route("/api/archive/purge", methods=["POST"])

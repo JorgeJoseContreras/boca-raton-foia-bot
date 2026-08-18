@@ -22,7 +22,7 @@ def generate_filled_hillsboro_pdf(output_path):
     can.drawString(360, 675, "(561) 555-0199")
     
     # Email Address (around x=120, y=655)
-    can.drawString(120, 655, "jorge.properties.123@gmail.com")
+    can.drawString(120, 655, "jorge.property.123@gmail.com")
     
     # Item 1 requested (around x=40, y=595)
     can.setFont("Helvetica", 9)

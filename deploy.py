@@ -36,11 +36,11 @@ payload = {
         }
     },
     "envVars": [
-        {"key": "SENDER_EMAIL", "value": "jorge.properties.123@gmail.com"},
+        {"key": "SENDER_EMAIL", "value": "jorge.property.123@gmail.com"},
         {"key": "SENDER_PASSWORD", "value": "YOUR_16_CHAR_APP_PASSWORD"},
         {"key": "IMAP_SERVER", "value": "imap.gmail.com"},
         {"key": "SMTP_SERVER", "value": "smtp.gmail.com"},
-        {"key": "NOTIFICATION_EMAIL", "value": "jorge.properties.123@gmail.com"},
+        {"key": "NOTIFICATION_EMAIL", "value": "jorge.property.123@gmail.com"},
         {"key": "REQUESTOR_FIRST_NAME", "value": "Jorge"},
         {"key": "REQUESTOR_LAST_NAME", "value": "Contreras"},
         {"key": "REQUESTOR_PHONE", "value": "555-555-5555"},

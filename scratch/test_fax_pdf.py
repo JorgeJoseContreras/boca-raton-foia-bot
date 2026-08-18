@@ -84,7 +84,7 @@ Thank you for your prompt assistance with this public records request.
 
 Sincerely,
 Jorge Contreras
-jorge.properties.123@gmail.com
+jorge.property.123@gmail.com
 """
 
 generate_foia_pdf(subject, body, pdf_path)

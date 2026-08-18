@@ -75,7 +75,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
         f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n\n"
         f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
-        f"Please transmit all electronic files and CSV/Excel data exports to email: jorge.properties.123@gmail.com\n\n"
+        f"Please transmit all electronic files and CSV/Excel data exports to email: jorge.property.123@gmail.com\n\n"
         f"If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
         f"Thank you for your assistance.\n\n"
         f"Sincerely,\nJorge Contreras"
@@ -110,7 +110,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
             f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n"
             f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
             f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {req_date}, including parcel ID, site address, and contractor/owner details.\n\n"
-            f"Explicitly include instruction to deliver data exports to email: jorge.properties.123@gmail.com\n"
+            f"Explicitly include instruction to deliver data exports to email: jorge.property.123@gmail.com\n"
             f"Explicitly include this cost cap estimate clause: 'If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.'\n"
             f"Signed by Jorge Contreras.\n"
             f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
@@ -136,7 +136,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
     """
     Sends an email via SMTP to a specific municipality target.
     """
-    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
     sender_password = os.getenv("SENDER_PASSWORD")
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     

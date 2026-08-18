@@ -91,7 +91,7 @@ def create_hillsboro_2page_fax(subject, body, sender_email, output_path):
 create_hillsboro_2page_fax(
     "Florida Chapter 119 Public Records Request - Code Compliance & Condemned Properties - Town of Hillsboro Beach",
     "Dear City Clerk of Town of Hillsboro Beach,\n\nUnder Florida Chapter 119, I am submitting a public records request for digital exports (CSV/Excel) covering active code violations, condemned properties, and upcoming demolitions in Town of Hillsboro Beach, including property owner mailing addresses.\n\nThank you,\nJorge Contreras",
-    "jorge.properties.123@gmail.com",
+    "jorge.property.123@gmail.com",
     "scratch/hillsboro_2page_test.pdf"
 )
 

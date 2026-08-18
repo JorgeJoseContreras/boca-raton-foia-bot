@@ -53,7 +53,7 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
     and combines it into a 2-page fax package (Page 1: Cover Note + Reply Email, Page 2: Filled Form).
     """
     template_path = os.path.join(os.path.dirname(__file__), "templates", "hillsboro_form.pdf")
-    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
     
     if not os.path.exists(template_path):
         try:
@@ -208,7 +208,7 @@ def generate_foia_pdf(subject, body, output_path):
     
     # Date & Reference Header
     formatted_date = time.strftime("%B %d, %Y")
-    sender_email = os.getenv("SENDER_EMAIL", "jorge.properties.123@gmail.com")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
     story.append(Paragraph(f"<b>Date:</b> {formatted_date}<br/><b>Transmission Type:</b> Official Public Records Request (Fax)<br/><b>Reply Email Address:</b> <b>{sender_email}</b>", header_style))
     story.append(Spacer(1, 10))
     

@@ -24,7 +24,7 @@ def test_perfect_alignment():
     # 3. Phone (Optional) -> REMOVED as requested (leave blank)
     
     # 4. Email Address (Sitting on underline after Email Address: (Optional) )
-    can.drawString(185, 513, "jorge.properties.123@gmail.com")
+    can.drawString(185, 513, "jorge.property.123@gmail.com")
     
     # 5. ITEM(S) REQUESTED (Inside Box 1, perfectly on lines 1 & 2, keeping OFFICE USE clear)
     can.setFont("Helvetica", 9.5)

@@ -25,7 +25,7 @@ def test_page2_alignment():
     can.drawString(410, 537, "(561) 555-0199")
     
     # 4. Email Address (After "Email Address: (Optional) ")
-    can.drawString(185, 513, "jorge.properties.123@gmail.com")
+    can.drawString(185, 513, "jorge.property.123@gmail.com")
     
     # 5. ITEM(S) REQUESTED (Inside Box 1, keeping OFFICE USE column clear)
     can.setFont("Helvetica", 9.5)

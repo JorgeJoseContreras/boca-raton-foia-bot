@@ -24,7 +24,7 @@ def test_split_alignment():
     # 3. Phone -> Left blank
     
     # 4. Email Address
-    can.drawString(185, 513, "jorge.properties.123@gmail.com")
+    can.drawString(185, 513, "jorge.property.123@gmail.com")
     
     # 5. ITEM(S) REQUESTED (Split across rows 1, 2, and 3)
     can.setFont("Helvetica", 8.8)

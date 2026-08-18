@@ -23,7 +23,7 @@ def generate_exact_hillsboro_pdf():
     can.drawString(410, 549, "(561) 555-0199")
     
     # Email Address
-    can.drawString(180, 526, "jorge.properties.123@gmail.com")
+    can.drawString(180, 526, "jorge.property.123@gmail.com")
     
     # ITEM(S) REQUESTED (Line 1 & 2)
     can.setFont("Helvetica", 9)

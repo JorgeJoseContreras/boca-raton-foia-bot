@@ -9,7 +9,7 @@ DEFAULT_TEMPLATE = (
     "1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {date_of_request}, including case number, property address, violation description, and owner mailing address (in native format/CSV if available).\n\n"
     "2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {date_of_request}.\n\n"
     "3. Demolition Permits: A list of all demolition permits applied for, active, or completed between {start_date} and {date_of_request}, including parcel ID, site address, and contractor/owner details.\n\n"
-    "Please transmit all electronic files and CSV/Excel exports to: jorge.properties.123@gmail.com\n\n"
+    "Please transmit all electronic files and CSV/Excel exports to: jorge.property.123@gmail.com\n\n"
     "If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
     "Thank you for your assistance.\n\n"
     "Sincerely,\nJorge Contreras"
@@ -118,6 +118,9 @@ def init_db():
     t_row = cursor.fetchone()
     if t_row and ("exceed $25.00" not in t_row[0] or "{addressee}" not in t_row[0] or "1. Active Code Violations" not in t_row[0]):
         cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
+        
+    # Force update any custom template email address typos
+    cursor.execute("UPDATE settings SET value = replace(value, 'jorge.properties.123@gmail.com', 'jorge.property.123@gmail.com') WHERE key = 'foia_template'")
 
     conn.commit()
     conn.close()
