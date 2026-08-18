@@ -51,7 +51,7 @@ def check_inbox():
                                 body_text = part.get_payload(decode=True).decode(charset, errors='replace')
                             except Exception:
                                 pass
-                            continue
+                            break
                         if content_disposition is None:
                             continue
                         

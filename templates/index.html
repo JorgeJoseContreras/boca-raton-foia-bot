@@ -618,7 +618,7 @@
                     <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
                     {% endif %}
                     {% if resp.body %}
-                    <div class="feed-body">{{ resp.body }}</div>
+                    <div class="feed-body">{{ resp.body | e }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}
