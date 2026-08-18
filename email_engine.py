@@ -519,7 +519,15 @@ def check_inbox():
                 is_new_uid = int(uid) > last_scanned_uid
                 
                 if is_target_sender or has_attachment or is_foia_related:
-                    response_result = log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
+                    response_result = log_response(
+                        subject,
+                        sender,
+                        has_attachment,
+                        attachment_name,
+                        body_text,
+                        imap_uid=uid,
+                        include_metadata=True
+                    )
                     if response_result.get("body_filled") and not is_new_uid:
                         refreshed += 1
                     if is_new_uid:
