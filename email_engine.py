@@ -42,8 +42,6 @@ def _decode_message_part(part):
             payload = raw_payload
     if payload is None:
         return ""
-    if isinstance(payload, str):
-        return payload
     try:
         return payload.decode(charset, errors='replace')
     except Exception:
