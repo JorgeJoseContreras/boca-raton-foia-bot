@@ -531,7 +531,7 @@
                     <td style="text-align: center;">
                         {% if req.pdf_id %}
                             <a href="/api/fax/pdf/{{ req.pdf_id }}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>
-                        {% elif req.recipient_email.startswith('+') or 'Fax' in req.record_type or 'Fax ID:' in req.body_preview %}
+                        {% elif (req.recipient_email or '').startswith('+') or 'Fax' in (req.record_type or '') or 'Fax ID:' in (req.body_preview or '') %}
                             <span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>
                         {% else %}
                             <span style="font-size: 11px; color: #888;">Email</span>
@@ -565,7 +565,7 @@
                     <td style="text-align: center;">
                         {% if req.pdf_id %}
                             <a href="/api/fax/pdf/{{ req.pdf_id }}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>
-                        {% elif req.recipient_email.startswith('+') or 'Fax' in req.record_type or 'Fax ID:' in req.body_preview %}
+                        {% elif (req.recipient_email or '').startswith('+') or 'Fax' in (req.record_type or '') or 'Fax ID:' in (req.body_preview or '') %}
                             <span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>
                         {% else %}
                             <span style="font-size: 11px; color: #888;">Email</span>
