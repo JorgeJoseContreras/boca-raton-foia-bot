@@ -264,6 +264,10 @@
             border-radius: 4px;
             padding: 10px 14px;
             margin-bottom: 10px;
+            cursor: default;
+        }
+
+        .feed-item-collapsible {
             cursor: pointer;
         }
 
@@ -608,7 +612,7 @@
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
-                <div class="feed-item" onclick="this.classList.toggle('expanded')">
+                <div class="feed-item{% if resp.body %} feed-item-collapsible{% endif %}"{% if resp.body %} onclick="this.classList.toggle('expanded')"{% endif %}>
                     <div class="feed-header">
                         <span>From: {{ resp.sender }}</span>
                         <span>{{ resp.timestamp }}</span>

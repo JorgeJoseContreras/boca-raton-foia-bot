@@ -2,6 +2,8 @@ import os
 import time
 import smtplib
 import email
+import re
+import html as html_lib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
@@ -12,6 +14,21 @@ import traceback
 import requests
 
 from database import get_setting, log_request, log_response, set_setting, update_request_by_id
+
+
+def _extract_text_from_html(html_content):
+    if not html_content:
+        return ""
+
+    text = re.sub(r'(?is)<(script|style).*?>.*?</\1>', ' ', html_content)
+    text = re.sub(r'(?i)<br\s*/?>', '\n', text)
+    text = re.sub(r'(?i)</p\s*>', '\n\n', text)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = html_lib.unescape(text)
+    text = re.sub(r'\r\n?', '\n', text)
+    text = re.sub(r'[ \t]+\n', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
 
 TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
@@ -436,6 +453,7 @@ def check_inbox():
                 has_attachment = False
                 attachment_name = ""
                 body_text = ""
+                html_body = ""
                 
                 if email_message.is_multipart():
                     for part in email_message.walk():
@@ -449,6 +467,15 @@ def check_inbox():
                                 payload = part.get_payload(decode=True)
                                 if payload is not None:
                                     body_text = payload.decode(charset, errors='replace')
+                            except Exception:
+                                pass
+                            continue
+                        if content_disposition is None and content_type == 'text/html' and not html_body:
+                            try:
+                                charset = part.get_content_charset() or 'utf-8'
+                                payload = part.get_payload(decode=True)
+                                if payload is not None:
+                                    html_body = payload.decode(charset, errors='replace')
                             except Exception:
                                 pass
                             continue
@@ -466,6 +493,18 @@ def check_inbox():
                             body_text = payload.decode(charset, errors='replace')
                     except Exception:
                         pass
+                elif email_message.get_content_type() == 'text/html':
+                    try:
+                        charset = email_message.get_content_charset() or 'utf-8'
+                        payload = email_message.get_payload(decode=True)
+                        if payload is not None:
+                            html_body = payload.decode(charset, errors='replace')
+                    except Exception:
+                        pass
+
+                if not body_text and html_body:
+                    body_text = _extract_text_from_html(html_body)
+                body_text = (body_text or "").strip()
                 
                 # Match sender against target emails/domains
                 is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
