@@ -163,11 +163,13 @@ def trigger_request():
     custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d}
     print(f"DEBUG: /api/trigger received drafts for: {list(custom_drafts.keys())}")
     
-    def task():
-        send_all_foia_requests(custom_drafts=custom_drafts)
-        
-    thread = threading.Thread(target=task)
-    thread.start()
+    from datetime import datetime
+    scheduler.add_job(
+        func=send_all_foia_requests,
+        trigger="date",
+        run_date=datetime.now(),
+        kwargs={"custom_drafts": custom_drafts}
+    )
     
     return jsonify({"status": "success", "message": "Multi-City FOIA dispatch triggered."})
 
@@ -188,17 +190,24 @@ def trigger_single_request():
     if not city_name:
         return jsonify({"status": "error", "message": "city_name required"}), 400
         
-    def task():
-        target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
-        if target and target.get("type") == "fax":
+    target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
+    if not target:
+        return jsonify({"status": "error", "message": f"Municipality {city_name} not found"}), 404
+        
+    def send_single_task():
+        if target.get("type") == "fax":
             from fax_engine import get_city_fax_number
             fax_num = get_city_fax_number(city_name) or target["email"]
             send_single_foia_fax(city_name, target_fax_number=fax_num)
-        elif target:
+        else:
             send_single_foia_email(city_name, target["email"])
                 
-    thread = threading.Thread(target=task)
-    thread.start()
+    from datetime import datetime
+    scheduler.add_job(
+        func=send_single_task,
+        trigger="date",
+        run_date=datetime.now()
+    )
     
     return jsonify({"status": "success", "message": f"FOIA request triggered for {city_name}."})
 
