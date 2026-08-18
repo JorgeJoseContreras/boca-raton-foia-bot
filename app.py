@@ -161,6 +161,7 @@ def trigger_request():
     data = request.get_json(silent=True) or {}
     drafts_list = data.get("drafts", [])
     custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d}
+    print(f"DEBUG: /api/trigger received drafts for: {list(custom_drafts.keys())}")
     
     def task():
         send_all_foia_requests(custom_drafts=custom_drafts)

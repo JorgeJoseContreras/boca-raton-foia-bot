@@ -743,10 +743,10 @@
                 const check = card.querySelector('.exclude-checkbox');
                 if (check && !check.checked) return;
                 const city = card.getAttribute('data-city');
-                const subject = card.querySelector('.edit-subject').value;
-                const body = card.querySelector('.edit-body').value;
-                if (city) {
-                    drafts.push({ city, subject, body });
+                const subjectEl = card.querySelector('.edit-subject');
+                const bodyEl = card.querySelector('.edit-body');
+                if (city && subjectEl && bodyEl) {
+                    drafts.push({ city, subject: subjectEl.value, body: bodyEl.value });
                 }
             });
 
