@@ -256,7 +256,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         print(f"Error generating content via Gemini API for {city_name}: {e}")
         return subject_default, standard_body
 
-def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None):
+def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None, smtp_server_session=None):
     """
     Sends an email via SMTP to a specific municipality target.
     """
@@ -284,9 +284,12 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'plain'))
         
-        with smtplib.SMTP_SSL(smtp_server, 465) as server:
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, target_email, msg.as_string())
+        if smtp_server_session is not None:
+            smtp_server_session.sendmail(sender_email, target_email, msg.as_string())
+        else:
+            with smtplib.SMTP_SSL(smtp_server, 465, timeout=15) as server:
+                server.login(sender_email, sender_password)
+                server.sendmail(sender_email, target_email, msg.as_string())
             
         body_preview = body[:150] + "..." if len(body) > 150 else body
         update_request_by_id(req_id, status="Sent", body_preview=body_preview, subject=subject)
@@ -316,29 +319,55 @@ def send_all_foia_requests(custom_drafts=None):
     
     print(f"Starting batch dispatch across {total} municipalities...")
     
-    for idx, target in enumerate(TARGET_MUNICIPALITIES):
-        city = target["name"]
-        addr = target["email"]
-        dispatch_type = target.get("type", "email")
-        
-        custom_sub = None
-        custom_bdy = None
-        if custom_drafts and city in custom_drafts:
-            custom_sub = custom_drafts[city].get("subject")
-            custom_bdy = custom_drafts[city].get("body")
+    sender_email = os.getenv("SENDER_EMAIL", "jorge.property.123@gmail.com")
+    sender_password = os.getenv("SENDER_PASSWORD")
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    
+    smtp_session = None
+    if sender_email and sender_password:
+        try:
+            print("Establishing SMTP SSL connection for batch...")
+            smtp_session = smtplib.SMTP_SSL(smtp_server, 465, timeout=15)
+            smtp_session.login(sender_email, sender_password)
+            print("SMTP login successful.")
+        except Exception as smtp_err:
+            print(f"Failed to establish SMTP batch session: {smtp_err}. Will fallback to individual connections.")
+            smtp_session = None
+
+    try:
+        for idx, target in enumerate(TARGET_MUNICIPALITIES):
+            city = target["name"]
+            addr = target["email"]
+            dispatch_type = target.get("type", "email")
             
-        if dispatch_type == "fax":
-            from fax_engine import get_city_fax_number
-            fax_num = get_city_fax_number(city) or addr
-            res = send_single_foia_fax(city, target_fax_number=fax_num, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id)
-        else:
-            res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id)
-            
-        results.append(res)
-        
-        # Rate limit delay (6s) between dispatches
-        if idx < total - 1:
-            time.sleep(6)
+            custom_sub = None
+            custom_bdy = None
+            if custom_drafts and city in custom_drafts:
+                custom_sub = custom_drafts[city].get("subject")
+                custom_bdy = custom_drafts[city].get("body")
+                
+            try:
+                if dispatch_type == "fax":
+                    from fax_engine import get_city_fax_number
+                    fax_num = get_city_fax_number(city) or addr
+                    res = send_single_foia_fax(city, target_fax_number=fax_num, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id)
+                else:
+                    res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id, smtp_server_session=smtp_session)
+                results.append(res)
+            except Exception as loop_err:
+                print(f"Uncaught loop error for {city}: {traceback.format_exc()}")
+                results.append({"status": "error", "city": city, "message": str(loop_err)})
+                
+            # Rate limit delay (6s) between dispatches
+            if idx < total - 1:
+                time.sleep(6)
+    finally:
+        if smtp_session:
+            try:
+                smtp_session.quit()
+                print("SMTP session closed.")
+            except Exception:
+                pass
             
     sent_count = sum(1 for r in results if r.get("status") == "success")
     

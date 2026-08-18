@@ -731,11 +731,21 @@
             }
             showToast("Triggering batch FOIA dispatch across all municipalities...");
 
+            const drafts = [];
+            document.querySelectorAll('.draft-card').forEach(card => {
+                const city = card.getAttribute('data-city');
+                const subject = card.querySelector('.edit-subject').value;
+                const body = card.querySelector('.edit-body').value;
+                if (city) {
+                    drafts.push({ city, subject, body });
+                }
+            });
+
             try {
                 const res = await fetch('/api/trigger', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ drafts: drafts })
                 });
                 const data = await res.json();
                 showToast(data.message);

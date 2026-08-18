@@ -159,14 +159,16 @@ def generate_preview():
 @app.route("/api/trigger", methods=["POST"])
 def trigger_request():
     data = request.get_json(silent=True) or {}
+    drafts_list = data.get("drafts", [])
+    custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d}
     
     def task():
-        send_all_foia_requests()
+        send_all_foia_requests(custom_drafts=custom_drafts)
         
     thread = threading.Thread(target=task)
     thread.start()
     
-    return jsonify({"status": "success", "message": "Multi-City FOIA email dispatch triggered for all 5 municipalities."})
+    return jsonify({"status": "success", "message": "Multi-City FOIA dispatch triggered."})
 
 @app.route("/api/trigger_single", methods=["POST"])
 def trigger_single_request():
