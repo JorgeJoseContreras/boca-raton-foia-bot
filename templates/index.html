@@ -841,8 +841,23 @@
                 if (!res.ok || data.status === 'error') {
                     throw new Error(data.message || 'Inbox check failed.');
                 }
-                showToast(`Inbox checked. Found ${data.count || 0} items.`);
-                setTimeout(() => location.reload(), 1500);
+                const newCount = data.count || 0;
+                const refreshedCount = data.refreshed || 0;
+                if (newCount > 0 && refreshedCount > 0) {
+                    showToast(`Inbox checked. Found ${newCount} new item(s) and refreshed ${refreshedCount} reply entr${refreshedCount === 1 ? 'y' : 'ies'}.`);
+                } else if (newCount > 0) {
+                    showToast(`Inbox checked. Found ${newCount} new item(s).`);
+                } else if (refreshedCount > 0) {
+                    showToast(`Inbox checked. Refreshed ${refreshedCount} reply entr${refreshedCount === 1 ? 'y' : 'ies'}.`);
+                } else {
+                    showToast("Inbox checked. No new replies found.");
+                }
+                if (newCount > 0 || refreshedCount > 0) {
+                    setTimeout(() => location.reload(), 1500);
+                } else if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Check Inbox for Replies';
+                }
             } catch (err) {
                 showToast(err.message || "Error checking inbox.");
                 if (btn) {

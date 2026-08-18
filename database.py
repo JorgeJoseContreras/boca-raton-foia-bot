@@ -210,7 +210,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
     if normalized_uid:
         cursor.execute(
             '''
-            SELECT id
+            SELECT id, COALESCE(body, '')
             FROM responses
             WHERE imap_uid = ?
             LIMIT 1
@@ -220,6 +220,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
         existing = cursor.fetchone()
 
         if existing:
+            body_was_empty = existing[1] == ""
+            body_filled = body_was_empty and bool(body)
             cursor.execute(
                 '''
                 UPDATE responses
@@ -237,7 +239,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
             )
             conn.commit()
             conn.close()
-            return existing[0]
+            return {"id": existing[0], "action": "updated", "body_filled": body_filled}
 
         cursor.execute(
             '''
@@ -257,6 +259,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
         legacy_matches = cursor.fetchall()
 
         if len(legacy_matches) == 1:
+            body_filled = bool(body)
             cursor.execute(
                 '''
                 UPDATE responses
@@ -284,7 +287,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
             )
             conn.commit()
             conn.close()
-            return legacy_matches[0][0]
+            return {"id": legacy_matches[0][0], "action": "updated", "body_filled": body_filled}
 
     cursor.execute(
         '''
@@ -296,7 +299,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
     conn.commit()
     response_id = cursor.lastrowid
     conn.close()
-    return response_id
+    return {"id": response_id, "action": "inserted", "body_filled": bool(body)}
 
 def update_request_by_id(req_id, status=None, body_preview=None, subject=None, pdf_id=None):
     if not req_id:

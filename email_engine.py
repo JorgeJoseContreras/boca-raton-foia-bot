@@ -460,6 +460,7 @@ def check_inbox():
                 message_uids = inbox_uids
             
             logs = []
+            refreshed = 0
             for uid in reversed(message_uids):
                 fetch_data = server.fetch([uid], 'RFC822')
                 if not fetch_data or uid not in fetch_data:
@@ -518,7 +519,9 @@ def check_inbox():
                 is_new_uid = int(uid) > last_scanned_uid
                 
                 if is_target_sender or has_attachment or is_foia_related:
-                    log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
+                    response_result = log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
+                    if response_result.get("body_filled") and not is_new_uid:
+                        refreshed += 1
                     if is_new_uid:
                         logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
                         
@@ -531,7 +534,7 @@ def check_inbox():
             if not history_backfilled:
                 set_setting("imap_history_backfilled", "true")
                 
-        return {"status": "success", "count": len(logs), "logs": logs}
+        return {"status": "success", "count": len(logs), "refreshed": refreshed, "logs": logs}
         
     except Exception as e:
         print(f"IMAP Error: {e}")
