@@ -2,6 +2,8 @@ import os
 import time
 import smtplib
 import email
+import re
+import html as html_lib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import decode_header
@@ -12,6 +14,40 @@ import traceback
 import requests
 
 from database import get_setting, log_request, log_response, set_setting, update_request_by_id
+
+RECENT_INBOX_BACKFILL_WINDOW = 200
+
+
+def _extract_text_from_html(html_content):
+    if not html_content:
+        return ""
+
+    text = re.sub(r'(?is)<(script|style).*?>.*?</\1>', ' ', html_content)
+    text = re.sub(r'(?i)<br\s*/?>', '\n', text)
+    text = re.sub(r'(?i)</p\s*>', '\n\n', text)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = html_lib.unescape(text)
+    text = re.sub(r'\r\n?', '\n', text)
+    text = re.sub(r'[ \t]+\n', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+def _decode_message_part(part):
+    charset = part.get_content_charset() or 'utf-8'
+    payload = part.get_payload(decode=True)
+    if payload is None:
+        raw_payload = part.get_payload()
+        if isinstance(raw_payload, str):
+            return raw_payload
+        if isinstance(raw_payload, bytes):
+            payload = raw_payload
+    if payload is None:
+        return ""
+    try:
+        return payload.decode(charset, errors='replace')
+    except Exception:
+        return payload.decode('utf-8', errors='replace')
 
 TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
@@ -412,11 +448,19 @@ def check_inbox():
                 last_scanned_uid = 0
 
             if history_backfilled:
-                message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+                new_message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+                # Re-scan a recent window to backfill bodies that were previously stored empty.
+                recent_window_uids = (
+                    inbox_uids[-RECENT_INBOX_BACKFILL_WINDOW:]
+                    if len(inbox_uids) > RECENT_INBOX_BACKFILL_WINDOW
+                    else inbox_uids
+                )
+                message_uids = sorted(set(new_message_uids + recent_window_uids), key=int)
             else:
                 message_uids = inbox_uids
             
             logs = []
+            refreshed = 0
             for uid in reversed(message_uids):
                 fetch_data = server.fetch([uid], 'RFC822')
                 if not fetch_data or uid not in fetch_data:
@@ -436,55 +480,69 @@ def check_inbox():
                 has_attachment = False
                 attachment_name = ""
                 body_text = ""
+                html_body = ""
                 
                 if email_message.is_multipart():
                     for part in email_message.walk():
                         if part.get_content_maintype() == 'multipart':
                             continue
                         content_disposition = part.get('Content-Disposition')
+                        disposition = (content_disposition or "").lower()
                         content_type = part.get_content_type()
-                        if content_disposition is None and content_type == 'text/plain' and not body_text:
-                            try:
-                                charset = part.get_content_charset() or 'utf-8'
-                                payload = part.get_payload(decode=True)
-                                if payload is not None:
-                                    body_text = payload.decode(charset, errors='replace')
-                            except Exception:
-                                pass
-                            continue
-                        if content_disposition is None:
-                            continue
                         filename = part.get_filename()
-                        if filename:
+                        is_text_part = content_type in ('text/plain', 'text/html')
+                        has_attachment_marker = bool(filename) or ("attachment" in disposition)
+
+                        if is_text_part and not has_attachment_marker:
+                            if content_type == 'text/plain' and not body_text:
+                                body_text = _decode_message_part(part)
+                            elif content_type == 'text/html' and not html_body:
+                                html_body = _decode_message_part(part)
+                            continue
+
+                        if has_attachment_marker:
                             has_attachment = True
-                            attachment_name = filename
+                            if filename and not attachment_name:
+                                attachment_name = filename
                 elif email_message.get_content_type() == 'text/plain':
-                    try:
-                        charset = email_message.get_content_charset() or 'utf-8'
-                        payload = email_message.get_payload(decode=True)
-                        if payload is not None:
-                            body_text = payload.decode(charset, errors='replace')
-                    except Exception:
-                        pass
+                    body_text = _decode_message_part(email_message)
+                elif email_message.get_content_type() == 'text/html':
+                    html_body = _decode_message_part(email_message)
+
+                if not body_text and html_body:
+                    body_text = _extract_text_from_html(html_body)
+                body_text = (body_text or "").strip()
                 
                 # Match sender against target emails/domains
                 is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
                 is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
+                is_new_uid = int(uid) > last_scanned_uid
                 
                 if is_target_sender or has_attachment or is_foia_related:
-                    log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
-                    logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
-                    
-                    # Notify via Telegram
-                    attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
-                    send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
+                    response_result = log_response(
+                        subject,
+                        sender,
+                        has_attachment,
+                        attachment_name,
+                        body_text,
+                        imap_uid=uid,
+                        include_metadata=True
+                    )
+                    if response_result.get("body_filled") and not is_new_uid:
+                        refreshed += 1
+                    if is_new_uid:
+                        logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
+                        
+                        # Notify via Telegram
+                        attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
+                        send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
 
             if inbox_uids:
                 set_setting("imap_last_scanned_uid", str(max(int(uid) for uid in inbox_uids)))
             if not history_backfilled:
                 set_setting("imap_history_backfilled", "true")
                 
-        return {"status": "success", "count": len(logs), "logs": logs}
+        return {"status": "success", "count": len(logs), "refreshed": refreshed, "logs": logs}
         
     except Exception as e:
         print(f"IMAP Error: {e}")

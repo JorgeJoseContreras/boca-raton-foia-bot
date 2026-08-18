@@ -201,7 +201,7 @@ def log_request(status, record_type, recipient_email, subject, body_preview, cit
     conn.close()
     return req_id
 
-def log_response(subject, sender, has_attachment, attachment_name="", body="", imap_uid=None):
+def log_response(subject, sender, has_attachment, attachment_name="", body="", imap_uid=None, include_metadata=False):
     conn = get_connection()
     cursor = conn.cursor()
     normalized_uid = str(imap_uid).strip() if imap_uid is not None and str(imap_uid).strip() else None
@@ -210,7 +210,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
     if normalized_uid:
         cursor.execute(
             '''
-            SELECT id
+            SELECT id, COALESCE(body, '')
             FROM responses
             WHERE imap_uid = ?
             LIMIT 1
@@ -220,6 +220,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
         existing = cursor.fetchone()
 
         if existing:
+            body_was_empty = existing[1] == ""
+            body_filled = body_was_empty and bool(body)
             cursor.execute(
                 '''
                 UPDATE responses
@@ -237,11 +239,13 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
             )
             conn.commit()
             conn.close()
+            if include_metadata:
+                return {"id": existing[0], "action": "updated", "body_filled": body_filled}
             return existing[0]
 
         cursor.execute(
             '''
-            SELECT id
+            SELECT id, COALESCE(body, '')
             FROM responses
             WHERE imap_uid IS NULL
               AND subject = ?
@@ -257,6 +261,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
         legacy_matches = cursor.fetchall()
 
         if len(legacy_matches) == 1:
+            body_was_empty = legacy_matches[0][1] == ""
+            body_filled = body_was_empty and bool(body)
             cursor.execute(
                 '''
                 UPDATE responses
@@ -284,6 +290,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
             )
             conn.commit()
             conn.close()
+            if include_metadata:
+                return {"id": legacy_matches[0][0], "action": "updated", "body_filled": body_filled}
             return legacy_matches[0][0]
 
     cursor.execute(
@@ -296,6 +304,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
     conn.commit()
     response_id = cursor.lastrowid
     conn.close()
+    if include_metadata:
+        return {"id": response_id, "action": "inserted", "body_filled": bool(body)}
     return response_id
 
 def update_request_by_id(req_id, status=None, body_preview=None, subject=None, pdf_id=None):

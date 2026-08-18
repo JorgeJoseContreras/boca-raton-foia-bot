@@ -604,7 +604,10 @@
         <p style="color: #777; font-style: italic;">No public records requests have been dispatched yet.</p>
         {% endif %}
 
-        <div class="section-title">Inbox Response Feed</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #eeeeee; padding-bottom: 8px;">
+            <div class="section-title" style="margin: 0; border: none; padding: 0;">Inbox Response Feed</div>
+            <button class="btn btn-outline" id="checkInboxBtn" style="padding: 6px 12px; font-size: 12px;" onclick="checkInbox(this)">Check Inbox for Replies</button>
+        </div>
         <div class="feed-container">
             {% if responses %}
                 {% for resp in responses %}
@@ -617,9 +620,7 @@
                     {% if resp.has_attachment %}
                     <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
                     {% endif %}
-                    {% if resp.body %}
-                    <div class="feed-body">{{ resp.body | e }}</div>
-                    {% endif %}
+                    <div class="feed-body">{% if resp.body %}{{ resp.body | e }}{% else %}<em style="color: #666;">No message body captured yet. Click “Check Inbox for Replies” to refresh this entry.</em>{% endif %}</div>
                 </div>
                 {% endfor %}
             {% else %}
@@ -828,15 +829,41 @@
             }
         }
 
-        async function checkInbox() {
+        async function checkInbox(btn) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span>Checking...';
+            }
             showToast("Checking inbox for replies across all cities...");
             try {
                 const res = await fetch('/api/check_inbox', { method: 'POST' });
                 const data = await res.json();
-                showToast(`Inbox checked. Found ${data.count || 0} items.`);
-                if (data.count > 0) setTimeout(() => location.reload(), 2000);
+                if (!res.ok || data.status === 'error') {
+                    throw new Error(data.message || 'Inbox check failed.');
+                }
+                const newCount = data.count || 0;
+                const refreshedCount = data.refreshed || 0;
+                if (newCount > 0 && refreshedCount > 0) {
+                    showToast(`Inbox checked. Found ${newCount} new item(s) and refreshed ${refreshedCount} reply entr${refreshedCount === 1 ? 'y' : 'ies'}.`);
+                } else if (newCount > 0) {
+                    showToast(`Inbox checked. Found ${newCount} new item(s).`);
+                } else if (refreshedCount > 0) {
+                    showToast(`Inbox checked. Refreshed ${refreshedCount} reply entr${refreshedCount === 1 ? 'y' : 'ies'}.`);
+                } else {
+                    showToast("Inbox checked. No new replies found.");
+                }
+                if (newCount > 0 || refreshedCount > 0) {
+                    setTimeout(() => location.reload(), 1500);
+                } else if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Check Inbox for Replies';
+                }
             } catch (err) {
-                showToast("Error checking inbox.");
+                showToast(err.message || "Error checking inbox.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Check Inbox for Replies';
+                }
             }
         }
 
