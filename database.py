@@ -243,7 +243,7 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
 
         cursor.execute(
             '''
-            SELECT id
+            SELECT id, COALESCE(body, '')
             FROM responses
             WHERE imap_uid IS NULL
               AND subject = ?
@@ -259,7 +259,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
         legacy_matches = cursor.fetchall()
 
         if len(legacy_matches) == 1:
-            body_filled = bool(body)
+            body_was_empty = legacy_matches[0][1] == ""
+            body_filled = body_was_empty and bool(body)
             cursor.execute(
                 '''
                 UPDATE responses
