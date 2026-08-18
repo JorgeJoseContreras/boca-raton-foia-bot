@@ -11,7 +11,7 @@ import json
 import traceback
 import requests
 
-from database import log_request, log_response, update_request_by_id
+from database import get_setting, log_request, log_response, set_setting, update_request_by_id
 
 TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@myboca.us", "type": "email"},
     {"name": "City of Delray Beach", "email": "cityclerk@mydelraybeach.com", "type": "email"},
@@ -403,10 +403,21 @@ def check_inbox():
             server.login(email_user, email_pass)
             server.select_folder('INBOX')
             
-            recent_uids = server.search(['ALL'])
+            inbox_uids = server.search(['ALL'])
+            history_backfilled = (get_setting("imap_history_backfilled", "false") or "false").lower() == "true"
+            last_scanned_uid_raw = get_setting("imap_last_scanned_uid", "0") or "0"
+            try:
+                last_scanned_uid = int(last_scanned_uid_raw)
+            except (TypeError, ValueError):
+                last_scanned_uid = 0
+
+            if history_backfilled:
+                message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+            else:
+                message_uids = inbox_uids
             
             logs = []
-            for uid in reversed(recent_uids):
+            for uid in reversed(message_uids):
                 fetch_data = server.fetch([uid], 'RFC822')
                 if not fetch_data or uid not in fetch_data:
                     continue
@@ -467,6 +478,11 @@ def check_inbox():
                     # Notify via Telegram
                     attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
                     send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
+
+            if inbox_uids:
+                set_setting("imap_last_scanned_uid", str(max(int(uid) for uid in inbox_uids)))
+            if not history_backfilled:
+                set_setting("imap_history_backfilled", "true")
                 
         return {"status": "success", "count": len(logs), "logs": logs}
         

@@ -250,13 +250,13 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
               AND COALESCE(attachment_name, '') = ?
               AND COALESCE(body, '') = ''
             ORDER BY id DESC
-            LIMIT 1
+            LIMIT 2
             ''',
             (subject, sender, has_attachment, normalized_attachment)
         )
-        legacy_match = cursor.fetchone()
+        legacy_matches = cursor.fetchall()
 
-        if legacy_match:
+        if len(legacy_matches) == 1:
             cursor.execute(
                 '''
                 UPDATE responses
@@ -279,12 +279,12 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
                     normalized_attachment,
                     body or "",
                     body or "",
-                    legacy_match[0],
+                    legacy_matches[0][0],
                 )
             )
             conn.commit()
             conn.close()
-            return legacy_match[0]
+            return legacy_matches[0][0]
 
     cursor.execute(
         '''
