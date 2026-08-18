@@ -107,6 +107,7 @@ def init_db():
         "fax_pompano_beach": "+19547864095",
         "fax_sea_ranch_lakes": "+19549435808",
         "fax_lauderhill": "+19547303062",
+        "fax_aventura": "+13054668998",
         "telnyx_fax_number": "+17624752325"
     }
     

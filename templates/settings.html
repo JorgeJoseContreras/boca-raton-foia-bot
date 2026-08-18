@@ -313,6 +313,10 @@
                 <label for="faxLauderhill">City of Lauderhill Fax Number</label>
                 <input type="text" id="faxLauderhill" value="{{ settings.fax_lauderhill or '+19547303062' }}">
             </div>
+            <div class="form-group">
+                <label for="faxAventura">City of Aventura Fax Number</label>
+                <input type="text" id="faxAventura" value="{{ settings.fax_aventura or '+13054668998' }}">
+            </div>
         </div>
 
         <div class="card" style="border-color: #fecaca; background: #fffbfb;">
@@ -376,6 +380,7 @@
             const fax_pompano = document.getElementById('faxPompanoBeach').value;
             const fax_sea = document.getElementById('faxSeaRanchLakes').value;
             const fax_lauderhill = document.getElementById('faxLauderhill').value;
+            const fax_aventura = document.getElementById('faxAventura').value;
 
             try {
                 const res = await fetch('/api/settings', {
@@ -401,7 +406,8 @@
                         fax_boynton_beach: fax_boynton,
                         fax_pompano_beach: fax_pompano,
                         fax_sea_ranch_lakes: fax_sea,
-                        fax_lauderhill: fax_lauderhill
+                        fax_lauderhill: fax_lauderhill,
+                        fax_aventura: fax_aventura
                     })
                 });
                 const data = await res.json();

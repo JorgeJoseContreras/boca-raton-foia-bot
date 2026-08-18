@@ -29,7 +29,14 @@ TARGET_MUNICIPALITIES = [
     {"name": "City of Pompano Beach", "email": "+19547864095", "type": "fax"},
     {"name": "Village of Sea Ranch Lakes", "email": "+19549435808", "type": "fax"},
     {"name": "City of Lauderhill", "email": "+19547303062", "type": "fax"},
-    {"name": "City of Fort Lauderdale", "email": "PropertyRecords@fortlauderdale.gov", "type": "email"}
+    {"name": "City of Fort Lauderdale", "email": "PropertyRecords@fortlauderdale.gov", "type": "email"},
+    {"name": "City of Aventura", "email": "+13054668998", "type": "fax"},
+    {"name": "City of Atlantis", "email": "clerk@atlantisfl.gov", "type": "email"},
+    {"name": "City of Avon Park", "email": "cityclerk@avonpark.city", "type": "email"},
+    {"name": "City of Plantation", "email": "cityclerk@plantation.org", "type": "email"},
+    {"name": "City of Belle Glade", "email": "cityclerk@bellegladegov.com", "type": "email"},
+    {"name": "City of Bonita Springs", "email": "cityclerk@cityofbonitasprings.org", "type": "email"},
+    {"name": "City of Doral", "email": "cityclerk@cityofdoral.com", "type": "email"}
 ]
 
 def send_telegram_notification(message):

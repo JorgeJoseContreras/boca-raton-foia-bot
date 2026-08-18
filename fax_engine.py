@@ -28,7 +28,8 @@ CITY_FAX_MAPPING = {
     "City of Boynton Beach": "fax_boynton_beach",
     "City of Pompano Beach": "fax_pompano_beach",
     "Village of Sea Ranch Lakes": "fax_sea_ranch_lakes",
-    "City of Lauderhill": "fax_lauderhill"
+    "City of Lauderhill": "fax_lauderhill",
+    "City of Aventura": "fax_aventura"
 }
 
 def get_city_fax_number(city_name):
@@ -50,7 +51,8 @@ def get_city_fax_number(city_name):
         "City of Boynton Beach": "+15617426090",
         "City of Pompano Beach": "+19547864095",
         "Village of Sea Ranch Lakes": "+19549435808",
-        "City of Lauderhill": "+19547303062"
+        "City of Lauderhill": "+19547303062",
+        "City of Aventura": "+13054668998"
     }
     return defaults.get(city_name, "")
 
