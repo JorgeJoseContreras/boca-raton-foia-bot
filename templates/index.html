@@ -628,6 +628,26 @@
             {% endif %}
         </div>
 
+        <div class="section-title" style="margin-top: 25px;">Received Fax Feed (Telnyx)</div>
+        <div class="feed-container">
+            {% if inbound_faxes %}
+                {% for fax in inbound_faxes %}
+                <div class="feed-item">
+                    <div class="feed-header">
+                        <span>From: <strong>{{ fax.city_name }}</strong> ({{ fax.sender_number }})</span>
+                        <span>{{ fax.timestamp }}</span>
+                    </div>
+                    <div class="feed-subject">Received Fax ({{ fax.num_pages }} page{{ 's' if fax.num_pages > 1 else '' }})</div>
+                    <div class="attachment" style="margin-top: 5px;">
+                        📄 <a href="/faxes/{{ fax.file_name }}" target="_blank" style="font-weight: bold; color: #2b5797; text-decoration: underline;">View Received Fax PDF</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #777; font-style: italic; margin: 0;">No incoming faxes detected.</p>
+            {% endif %}
+        </div>
+
         <footer>
             <div>
                 <a href="/settings" style="font-weight: bold;">Application Settings</a>

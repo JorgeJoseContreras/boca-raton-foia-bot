@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, DATABASE_PATH
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -109,6 +109,7 @@ def index():
         })
 
     last_sent = get_last_sent_timestamps()
+    inbound_faxes = get_all_inbound_faxes()
 
     return render_template(
         "index.html",
@@ -120,7 +121,8 @@ def index():
         municipalities=TARGET_MUNICIPALITIES,
         total_cities=len(TARGET_MUNICIPALITIES),
         sender_email=sender_email,
-        last_sent=last_sent
+        last_sent=last_sent,
+        inbound_faxes=inbound_faxes
     )
 
 @app.route("/settings")
@@ -175,6 +177,78 @@ def trigger_request():
     )
     
     return jsonify({"status": "success", "message": "Multi-City FOIA dispatch triggered."})
+
+@app.route("/api/telnyx/inbound_fax", methods=["POST"])
+def telnyx_inbound_fax():
+    data = request.get_json(silent=True) or {}
+    print(f"DEBUG: Received Telnyx Webhook: {data}")
+    
+    event = data.get("data", {})
+    event_type = event.get("event_type")
+    
+    if event_type == "fax.received":
+        payload = event.get("payload", {})
+        fax_id = payload.get("fax_id")
+        sender = payload.get("from")
+        recipient = payload.get("to")
+        media_url = payload.get("media_url")
+        page_count = payload.get("page_count", 1)
+        status = payload.get("status", "received")
+        
+        if fax_id and media_url:
+            file_name = f"{fax_id}.pdf"
+            
+            def download_job():
+                try:
+                    import requests
+                    api_key = get_setting("telnyx_api_key") or os.getenv("TELNYX_API_KEY")
+                    headers = {}
+                    if api_key:
+                        headers["Authorization"] = f"Bearer {api_key}"
+                    
+                    inbound_dir = os.path.join(os.path.dirname(DATABASE_PATH), "inbound_faxes")
+                    os.makedirs(inbound_dir, exist_ok=True)
+                    
+                    dest_path = os.path.join(inbound_dir, file_name)
+                    print(f"Downloading inbound fax {fax_id} from {media_url} to {dest_path}...")
+                    
+                    r = requests.get(media_url, headers=headers, timeout=30)
+                    if r.status_code == 200:
+                        with open(dest_path, "wb") as f:
+                            f.write(r.content)
+                        print(f"Successfully downloaded inbound fax {fax_id}.")
+                        
+                        log_inbound_fax(sender, fax_id, file_name, page_count, status)
+                        
+                        from database import resolve_sender_fax_to_city
+                        resolved_city = resolve_sender_fax_to_city(sender)
+                        send_telegram_notification(
+                            f"📠 <b>Inbound Fax Received</b>\n"
+                            f"From: <b>{resolved_city}</b> ({sender})\n"
+                            f"Pages: {page_count}\n"
+                            f"File Name: <pre>{file_name}</pre>\n"
+                            f"View link: {os.getenv('APP_BASE_URL', 'https://boca-raton-foia-bot.onrender.com')}/faxes/{file_name}"
+                        )
+                    else:
+                        print(f"Failed to download fax {fax_id}: HTTP {r.status_code} - {r.text}")
+                except Exception as e:
+                    import traceback
+                    print(f"Error downloading inbound fax {fax_id}: {traceback.format_exc()}")
+            
+            from datetime import datetime
+            scheduler.add_job(
+                func=download_job,
+                trigger="date",
+                run_date=datetime.now()
+            )
+            
+    return jsonify({"status": "received"})
+
+@app.route("/faxes/<filename>")
+def serve_inbound_fax(filename):
+    inbound_dir = os.path.join(os.path.dirname(DATABASE_PATH), "inbound_faxes")
+    filename = os.path.basename(filename)
+    return send_from_directory(inbound_dir, filename)
 
 @app.route("/api/trigger_single", methods=["POST"])
 def trigger_single_request():

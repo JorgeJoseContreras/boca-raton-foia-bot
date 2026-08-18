@@ -100,6 +100,19 @@ def init_db():
         "ON responses(imap_uid) WHERE imap_uid IS NOT NULL"
     )
     
+    # Table for tracking received faxes via Telnyx
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inbound_faxes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            sender_number TEXT,
+            fax_id TEXT UNIQUE,
+            file_name TEXT,
+            num_pages INTEGER,
+            status TEXT
+        )
+    ''')
+    
     # Table for storing key-value settings
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
@@ -436,6 +449,63 @@ def get_last_sent_timestamps():
         ts = row[1]
         last_sent[city] = format_eastern_timestamp(ts)
     return last_sent
+
+def log_inbound_fax(sender_number, fax_id, file_name, num_pages, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO inbound_faxes (sender_number, fax_id, file_name, num_pages, status)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (sender_number, fax_id, file_name, num_pages, status))
+    conn.commit()
+    conn.close()
+
+def get_all_inbound_faxes():
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM inbound_faxes ORDER BY id DESC')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    result = []
+    for row in rows:
+        d = dict(row)
+        d["timestamp"] = format_eastern_timestamp(d.get("timestamp"))
+        d["city_name"] = resolve_sender_fax_to_city(d.get("sender_number"))
+        result.append(d)
+    return result
+
+def resolve_sender_fax_to_city(sender_num):
+    if not sender_num:
+        return "Unknown Sender"
+    
+    sender_digits = "".join(c for c in sender_num if c.isdigit())
+    if sender_digits.startswith("1") and len(sender_digits) > 10:
+        sender_digits = sender_digits[1:]
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'fax_%'")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    for key, val in rows:
+        if not val:
+            continue
+        val_digits = "".join(c for c in val if c.isdigit())
+        if val_digits.startswith("1") and len(val_digits) > 10:
+            val_digits = val_digits[1:]
+        if val_digits == sender_digits:
+            city_key = key.replace("fax_", "")
+            from email_engine import TARGET_MUNICIPALITIES
+            for target in TARGET_MUNICIPALITIES:
+                target_key = target["name"].lower().replace("city of ", "").replace("town of ", "").replace("village of ", "").replace(" ", "_").replace("-", "_")
+                if target_key == city_key:
+                    return target["name"]
+            return city_key.replace("_", " ").title()
+            
+    return "Unknown Sender"
 
 if __name__ == "__main__":
     init_db()
