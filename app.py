@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -108,6 +108,8 @@ def index():
             "timestamp": items[0].get("timestamp", ""),
         })
 
+    last_sent = get_last_sent_timestamps()
+
     return render_template(
         "index.html",
         requests=raw_requests,
@@ -117,7 +119,8 @@ def index():
         next_run_time=next_run,
         municipalities=TARGET_MUNICIPALITIES,
         total_cities=len(TARGET_MUNICIPALITIES),
-        sender_email=sender_email
+        sender_email=sender_email,
+        last_sent=last_sent
     )
 
 @app.route("/settings")

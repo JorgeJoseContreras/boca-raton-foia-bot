@@ -300,6 +300,29 @@ def purge_archived_requests():
     conn.commit()
     conn.close()
 
+def get_last_sent_timestamps():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT city_name, MAX(timestamp) as last_ts
+        FROM (
+            SELECT city_name, timestamp FROM requests WHERE status IN ('Sent', 'Sending', 'Failed')
+            UNION ALL
+            SELECT city_name, timestamp FROM archived_requests WHERE status IN ('Sent', 'Sending', 'Failed')
+        )
+        WHERE city_name IS NOT NULL AND city_name != ''
+        GROUP BY city_name
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    
+    last_sent = {}
+    for row in rows:
+        city = row[0]
+        ts = row[1]
+        last_sent[city] = format_eastern_timestamp(ts)
+    return last_sent
+
 if __name__ == "__main__":
     init_db()
     print(f"Database initialized at {DATABASE_PATH}")

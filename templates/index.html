@@ -442,7 +442,8 @@
                     <tr>
                         <th style="width: 250px; cursor: pointer; user-select: none;" onclick="sortDirTable(0, this)">Municipality Name <span class="sort-icon">⇅</span></th>
                         <th style="min-width: 320px; cursor: pointer; user-select: none;" onclick="sortDirTable(1, this)">Records Custodian Email / Fax <span class="sort-icon">⇅</span></th>
-                        <th style="width: 220px; cursor: pointer; user-select: none;" onclick="sortDirTable(2, this)">Requested Data Format <span class="sort-icon">⇅</span></th>
+                        <th style="width: 200px; cursor: pointer; user-select: none;" onclick="sortDirTable(2, this)">Last Sent <span class="sort-icon">⇅</span></th>
+                        <th style="width: 220px; cursor: pointer; user-select: none;" onclick="sortDirTable(3, this)">Requested Data Format <span class="sort-icon">⇅</span></th>
                         <th style="width: 100px; text-align: center;">Action</th>
                     </tr>
                 </thead>
@@ -452,6 +453,13 @@
                         <td><strong>{{ m.name }}</strong></td>
                         <td>
                             <code>{{ m.email }}</code> {% if m.type == 'fax' or m.email.startswith('+') %}<span style="font-size: 11px; color: #666;">(Fax)</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if last_sent.get(m.name) %}
+                                <span style="color: #047857; font-weight: 500;">{{ last_sent.get(m.name) }}</span>
+                            {% else %}
+                                <span style="color: #6b7280; font-style: italic;">Never</span>
+                            {% endif %}
                         </td>
                         <td>{% if m.type == 'fax' or m.email.startswith('+') %}Telnyx Cloud Fax (PDF Letter / Form){% else %}Email Transmission (CSV / Excel){% endif %}</td>
                         <td style="text-align: center;">
