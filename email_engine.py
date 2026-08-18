@@ -335,11 +335,18 @@ def send_all_foia_requests(custom_drafts=None):
             smtp_session = None
 
     try:
+        sent_any = False
         for idx, target in enumerate(TARGET_MUNICIPALITIES):
             city = target["name"]
             addr = target["email"]
             dispatch_type = target.get("type", "email")
             
+            if custom_drafts is not None and city not in custom_drafts:
+                continue
+                
+            if sent_any:
+                time.sleep(6)
+                
             custom_sub = None
             custom_bdy = None
             if custom_drafts and city in custom_drafts:
@@ -354,13 +361,10 @@ def send_all_foia_requests(custom_drafts=None):
                 else:
                     res = send_single_foia_email(city, addr, custom_subject=custom_sub, custom_body=custom_bdy, batch_id=batch_id, smtp_server_session=smtp_session)
                 results.append(res)
+                sent_any = True
             except Exception as loop_err:
                 print(f"Uncaught loop error for {city}: {traceback.format_exc()}")
                 results.append({"status": "error", "city": city, "message": str(loop_err)})
-                
-            # Rate limit delay (6s) between dispatches
-            if idx < total - 1:
-                time.sleep(6)
     finally:
         if smtp_session:
             try:
