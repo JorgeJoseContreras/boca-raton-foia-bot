@@ -480,12 +480,13 @@ def check_inbox():
                         disposition = (content_disposition or "").lower()
                         content_type = part.get_content_type()
                         filename = part.get_filename()
-                        is_attachment = bool(filename) or ("attachment" in disposition)
+                        is_text_part = content_type in ('text/plain', 'text/html')
+                        is_attachment = bool(filename) or ("attachment" in disposition) or not is_text_part
 
-                        if not is_attachment and content_type == 'text/plain' and not body_text:
+                        if is_text_part and "attachment" not in disposition and not filename and content_type == 'text/plain' and not body_text:
                             body_text = _decode_message_part(part)
                             continue
-                        if not is_attachment and content_type == 'text/html' and not html_body:
+                        if is_text_part and "attachment" not in disposition and not filename and content_type == 'text/html' and not html_body:
                             html_body = _decode_message_part(part)
                             continue
                         if not is_attachment:
