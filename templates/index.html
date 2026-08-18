@@ -838,10 +838,13 @@
             try {
                 const res = await fetch('/api/check_inbox', { method: 'POST' });
                 const data = await res.json();
+                if (!res.ok || data.status === 'error') {
+                    throw new Error(data.message || 'Inbox check failed.');
+                }
                 showToast(`Inbox checked. Found ${data.count || 0} items.`);
                 setTimeout(() => location.reload(), 1500);
             } catch (err) {
-                showToast("Error checking inbox.");
+                showToast(err.message || "Error checking inbox.");
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = 'Check Inbox for Replies';
