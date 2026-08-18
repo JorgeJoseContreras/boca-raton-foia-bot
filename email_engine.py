@@ -15,6 +15,8 @@ import requests
 
 from database import get_setting, log_request, log_response, set_setting, update_request_by_id
 
+RECENT_INBOX_BACKFILL_WINDOW = 200
+
 
 def _extract_text_from_html(html_content):
     if not html_content:
@@ -447,7 +449,12 @@ def check_inbox():
 
             if history_backfilled:
                 new_message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
-                recent_window_uids = inbox_uids[-200:] if len(inbox_uids) > 200 else inbox_uids
+                # Re-scan a recent window to backfill bodies that were previously stored empty.
+                recent_window_uids = (
+                    inbox_uids[-RECENT_INBOX_BACKFILL_WINDOW:]
+                    if len(inbox_uids) > RECENT_INBOX_BACKFILL_WINDOW
+                    else inbox_uids
+                )
                 message_uids = sorted(set(new_message_uids + recent_window_uids))
             else:
                 message_uids = inbox_uids
@@ -483,19 +490,19 @@ def check_inbox():
                         content_type = part.get_content_type()
                         filename = part.get_filename()
                         is_text_part = content_type in ('text/plain', 'text/html')
-                        is_attachment = bool(filename) or ("attachment" in disposition) or not is_text_part
+                        has_attachment_marker = bool(filename) or ("attachment" in disposition)
 
-                        if is_text_part and "attachment" not in disposition and not filename and content_type == 'text/plain' and not body_text:
-                            body_text = _decode_message_part(part)
+                        if is_text_part and not has_attachment_marker:
+                            if content_type == 'text/plain' and not body_text:
+                                body_text = _decode_message_part(part)
+                            elif content_type == 'text/html' and not html_body:
+                                html_body = _decode_message_part(part)
                             continue
-                        if is_text_part and "attachment" not in disposition and not filename and content_type == 'text/html' and not html_body:
-                            html_body = _decode_message_part(part)
-                            continue
-                        if not is_attachment:
-                            continue
-                        has_attachment = True
-                        if filename and not attachment_name:
-                            attachment_name = filename
+
+                        if has_attachment_marker or not is_text_part:
+                            has_attachment = True
+                            if filename and not attachment_name:
+                                attachment_name = filename
                 elif email_message.get_content_type() == 'text/plain':
                     body_text = _decode_message_part(email_message)
                 elif email_message.get_content_type() == 'text/html':
