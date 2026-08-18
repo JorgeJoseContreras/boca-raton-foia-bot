@@ -47,7 +47,7 @@ def get_city_fax_number(city_name):
         "Town of Hillsboro Beach": "+19544274834",
         "Town of Highland Beach": "+15612653582",
         "City of Deerfield Beach": "+19544804323",
-        "City of Coral Springs": "+19543441016",
+        "City of Coral Springs": "+18445421010",
         "City of Boynton Beach": "+15617426090",
         "City of Pompano Beach": "+19547864095",
         "Village of Sea Ranch Lakes": "+19549435808",
