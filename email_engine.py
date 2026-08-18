@@ -446,7 +446,9 @@ def check_inbox():
                 last_scanned_uid = 0
 
             if history_backfilled:
-                message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+                new_message_uids = [uid for uid in inbox_uids if int(uid) > last_scanned_uid]
+                recent_window_uids = inbox_uids[-200:] if len(inbox_uids) > 200 else inbox_uids
+                message_uids = sorted(set(new_message_uids + recent_window_uids))
             else:
                 message_uids = inbox_uids
             
@@ -506,14 +508,16 @@ def check_inbox():
                 # Match sender against target emails/domains
                 is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
                 is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
+                is_new_uid = int(uid) > last_scanned_uid
                 
                 if is_target_sender or has_attachment or is_foia_related:
                     log_response(subject, sender, has_attachment, attachment_name, body_text, imap_uid=uid)
-                    logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
-                    
-                    # Notify via Telegram
-                    attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
-                    send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
+                    if is_new_uid:
+                        logs.append({"subject": subject, "sender": sender, "attachment": attachment_name})
+                        
+                        # Notify via Telegram
+                        attach_msg = f"\nAttachment: {attachment_name}" if has_attachment else ""
+                        send_telegram_notification(f"<b>New Inbox Activity Detected</b>\nFrom: {sender}\nSubject: {subject}{attach_msg}")
 
             if inbox_uids:
                 set_setting("imap_last_scanned_uid", str(max(int(uid) for uid in inbox_uids)))
