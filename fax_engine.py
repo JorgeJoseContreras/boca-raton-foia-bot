@@ -139,7 +139,7 @@ def generate_hillsboro_official_pdf(subject, body, output_path):
         
         # --- Box 1: Active Code Violations ---
         can.drawString(55, 423, "Active Code Violations: Digital export of all open/active code violations as of " + formatted_date + ",")
-        can.drawString(36, 401, "including case number, property address, violation description, and owner mailing address (CSV).")
+        can.drawString(36, 401, "including case number, property address, Folio / Parcel ID, and violation description (CSV).")
         
         # --- Box 2: Condemned Properties ---
         can.drawString(55, 360, "Condemned Properties: List of all properties currently designated as condemned or unfit for human")
