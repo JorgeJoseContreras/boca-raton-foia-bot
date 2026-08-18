@@ -432,7 +432,11 @@
 
         <!-- Target Municipality Directory Table (Row Format) -->
         <div class="directory-container">
-            <div class="directory-title">Target Municipality Directory ({{ total_cities }} Municipalities)</div>
+            <div class="directory-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Target Municipality Directory ({{ total_cities }} Municipalities)</span>
+                <button onclick="toggleDirectoryTable(this)" title="Collapse / Expand" style="background: none; border: none; cursor: pointer; font-size: 16px; color: #555; padding: 0 4px; line-height: 1;" aria-label="Toggle directory table">&#9660;</button>
+            </div>
+            <div id="directoryTableWrapper">
             <table class="directory-table">
                 <thead>
                     <tr>
@@ -457,6 +461,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px; border-bottom: 1px solid #eeeeee; padding-bottom: 8px;">
@@ -574,6 +579,14 @@
 
         function closeModal() {
             document.getElementById('previewModal').style.display = 'none';
+        }
+
+        function toggleDirectoryTable(btn) {
+            const wrapper = document.getElementById('directoryTableWrapper');
+            const collapsed = wrapper.style.display === 'none';
+            wrapper.style.display = collapsed ? '' : 'none';
+            btn.innerHTML = collapsed ? '&#9660;' : '&#9650;';
+            btn.title = collapsed ? 'Collapse' : 'Expand';
         }
 
         async function openPreviewModal() {
