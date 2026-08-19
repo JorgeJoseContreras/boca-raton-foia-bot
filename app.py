@@ -58,6 +58,95 @@ def update_schedule_job(freq):
 current_schedule = get_setting("schedule_frequency", "off")
 update_schedule_job(current_schedule)
 
+def sync_historical_inbound_faxes():
+    """
+    Queries Telnyx API for recent inbound faxes and syncs them to local DB / disk cache.
+    """
+    import requests
+    import sqlite3
+    
+    api_key = get_setting("telnyx_api_key") or os.getenv("TELNYX_API_KEY")
+    if not api_key:
+        print("Telnyx API key not configured for historical sync.")
+        return
+        
+    api_key = api_key.strip().strip('"').strip("'")
+    headers = {"Authorization": f"Bearer {api_key}"}
+    
+    try:
+        url = "https://api.telnyx.com/v2/faxes?filter[direction]=inbound&page[size]=50"
+        print(f"Syncing historical faxes from Telnyx: {url}")
+        r = requests.get(url, headers=headers, timeout=20)
+        if r.status_code != 200:
+            print(f"Telnyx list faxes API returned {r.status_code}: {r.text}")
+            return
+            
+        data = r.json().get("data", [])
+        print(f"Found {len(data)} inbound faxes in Telnyx account.")
+        
+        # Get existing fax IDs to avoid re-downloading
+        from database import get_connection, format_eastern_timestamp
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT fax_id FROM inbound_faxes")
+        existing_ids = {row[0] for row in cursor.fetchall()}
+        conn.close()
+        
+        inbound_dir = os.path.join(os.path.dirname(DATABASE_PATH), "inbound_faxes")
+        os.makedirs(inbound_dir, exist_ok=True)
+        
+        for item in data:
+            fax_id = item.get("id")
+            if not fax_id or fax_id in existing_ids:
+                continue
+                
+            sender = item.get("from")
+            recipient = item.get("to")
+            media_url = item.get("media_url")
+            page_count = item.get("page_count", 1)
+            status = item.get("status", "received")
+            created_at = item.get("created_at")
+            
+            if not media_url:
+                continue
+                
+            file_name = f"{fax_id}.pdf"
+            dest_path = os.path.join(inbound_dir, file_name)
+            
+            # Download PDF
+            print(f"Downloading historical fax {fax_id} from {media_url}...")
+            fr = requests.get(media_url, headers=headers, timeout=30)
+            if fr.status_code == 200:
+                with open(dest_path, "wb") as f:
+                    f.write(fr.content)
+                
+                conn = get_connection()
+                cursor = conn.cursor()
+                try:
+                    clean_ts = created_at.replace("T", " ").split(".")[0]
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO inbound_faxes (sender_number, fax_id, file_name, num_pages, status, timestamp)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (sender, fax_id, file_name, page_count, status, clean_ts))
+                except Exception:
+                    cursor.execute('''
+                        INSERT OR REPLACE INTO inbound_faxes (sender_number, fax_id, file_name, num_pages, status)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (sender, fax_id, file_name, page_count, status))
+                conn.commit()
+                conn.close()
+                print(f"Successfully synced historical fax {fax_id}.")
+            else:
+                print(f"Failed to download historical fax {fax_id}: HTTP {fr.status_code}")
+                
+    except Exception as e:
+        import traceback
+        print(f"Error syncing historical faxes: {traceback.format_exc()}")
+
+# Sync historical faxes on startup
+from datetime import datetime
+scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
+
 # Shut down scheduler gracefully
 atexit.register(lambda: scheduler.shutdown())
 
@@ -110,6 +199,10 @@ def index():
 
     last_sent = get_last_sent_timestamps()
     inbound_faxes = get_all_inbound_faxes()
+
+    # Trigger background check to pull any new historical faxes from Telnyx API
+    from datetime import datetime
+    scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
 
     return render_template(
         "index.html",
