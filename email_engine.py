@@ -13,9 +13,12 @@ import json
 import traceback
 import requests
 
-from database import get_setting, log_request, log_response, set_setting, update_request_by_id
+from database import get_setting, log_request, log_response, set_setting, update_request_by_id, DATABASE_PATH
 
 RECENT_INBOX_BACKFILL_WINDOW = 200
+
+ATTACHMENTS_DIR = os.path.join(os.path.dirname(DATABASE_PATH), "attachments") if os.path.exists(os.path.dirname(DATABASE_PATH)) and os.path.dirname(DATABASE_PATH) else "attachments"
+os.makedirs(ATTACHMENTS_DIR, exist_ok=True)
 
 
 def _extract_text_from_html(html_content):
@@ -479,6 +482,7 @@ def check_inbox():
                 
                 has_attachment = False
                 attachment_name = ""
+                attachment_file = ""
                 body_text = ""
                 html_body = ""
                 
@@ -502,8 +506,27 @@ def check_inbox():
 
                         if has_attachment_marker:
                             has_attachment = True
-                            if filename and not attachment_name:
+                            if not filename:
+                                filename = f"attachment_{uid}.bin"
+                            else:
+                                decoded_fn = decode_header(filename)
+                                fn_part, fn_enc = decoded_fn[0]
+                                if isinstance(fn_part, bytes):
+                                    filename = fn_part.decode(fn_enc if fn_enc else "utf-8", errors="ignore")
+                            if not attachment_name:
                                 attachment_name = filename
+                                
+                            try:
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    clean_fn = "".join(c for c in filename if c.isalnum() or c in "._- ")
+                                    safe_fn = f"{uid}_{clean_fn}"
+                                    dest_path = os.path.join(ATTACHMENTS_DIR, safe_fn)
+                                    with open(dest_path, "wb") as f:
+                                        f.write(payload)
+                                    attachment_file = safe_fn
+                            except Exception as save_err:
+                                print(f"Error saving attachment for uid {uid}: {save_err}")
                 elif email_message.get_content_type() == 'text/plain':
                     body_text = _decode_message_part(email_message)
                 elif email_message.get_content_type() == 'text/html':
@@ -526,7 +549,8 @@ def check_inbox():
                         attachment_name,
                         body_text,
                         imap_uid=uid,
-                        include_metadata=True
+                        include_metadata=True,
+                        attachment_file=attachment_file
                     )
                     if response_result.get("body_filled") and not is_new_uid:
                         refreshed += 1
@@ -547,3 +571,120 @@ def check_inbox():
     except Exception as e:
         print(f"IMAP Error: {e}")
         return {"status": "error", "message": str(e)}
+
+def sync_all_past_attachments():
+    """
+    Retroactively scans all emails in the IMAP mailbox, downloads all attachments to disk,
+    and updates/inserts records into the database.
+    """
+    print("Starting retroactive sync of all past attachments from IMAP...")
+    imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
+    email_user = os.getenv("SENDER_EMAIL")
+    email_pass = os.getenv("SENDER_PASSWORD")
+    
+    if not email_user or not email_pass:
+        return {"status": "error", "message": "IMAP credentials not configured"}
+        
+    try:
+        with IMAPClient(imap_server, use_uid=True) as server:
+            server.login(email_user, email_pass)
+            server.select_folder('INBOX')
+            inbox_uids = server.search(['ALL'])
+            print(f"Retroactive sync scanning {len(inbox_uids)} total emails in inbox...")
+            
+            target_domains = ["myboca.us", "mydelraybeach.com", "coconutcreek.net", "cityofparkland.org", "townofhillsborobeach.com"]
+            target_emails = [t["email"].lower() for t in TARGET_MUNICIPALITIES]
+            
+            synced_count = 0
+            for uid in reversed(inbox_uids):
+                fetch_data = server.fetch([uid], 'RFC822')
+                if not fetch_data or uid not in fetch_data:
+                    continue
+                message_data = fetch_data[uid]
+                email_message = email.message_from_bytes(message_data[b'RFC822'])
+                
+                subject_header = email_message.get("Subject", "No Subject")
+                decoded_list = decode_header(subject_header)
+                subject, encoding = decoded_list[0]
+                if isinstance(subject, bytes):
+                    subject = subject.decode(encoding if encoding else "utf-8", errors="ignore")
+                sender = email_message.get("From", "").lower()
+                
+                has_attachment = False
+                attachment_name = ""
+                attachment_file = ""
+                body_text = ""
+                html_body = ""
+                
+                if email_message.is_multipart():
+                    for part in email_message.walk():
+                        if part.get_content_maintype() == 'multipart':
+                            continue
+                        content_disposition = part.get('Content-Disposition')
+                        disposition = (content_disposition or "").lower()
+                        content_type = part.get_content_type()
+                        filename = part.get_filename()
+                        is_text_part = content_type in ('text/plain', 'text/html')
+                        has_attachment_marker = bool(filename) or ("attachment" in disposition)
+                        
+                        if is_text_part and not has_attachment_marker:
+                            if content_type == 'text/plain' and not body_text:
+                                body_text = _decode_message_part(part)
+                            elif content_type == 'text/html' and not html_body:
+                                html_body = _decode_message_part(part)
+                            continue
+                            
+                        if has_attachment_marker:
+                            has_attachment = True
+                            if not filename:
+                                filename = f"attachment_{uid}.bin"
+                            else:
+                                decoded_fn = decode_header(filename)
+                                fn_part, fn_enc = decoded_fn[0]
+                                if isinstance(fn_part, bytes):
+                                    filename = fn_part.decode(fn_enc if fn_enc else "utf-8", errors="ignore")
+                            if not attachment_name:
+                                attachment_name = filename
+                            try:
+                                payload = part.get_payload(decode=True)
+                                if payload:
+                                    clean_fn = "".join(c for c in filename if c.isalnum() or c in "._- ")
+                                    safe_fn = f"{uid}_{clean_fn}"
+                                    dest_path = os.path.join(ATTACHMENTS_DIR, safe_fn)
+                                    with open(dest_path, "wb") as f:
+                                        f.write(payload)
+                                    attachment_file = safe_fn
+                            except Exception as save_err:
+                                print(f"Error saving attachment in sync for uid {uid}: {save_err}")
+                elif email_message.get_content_type() == 'text/plain':
+                    body_text = _decode_message_part(email_message)
+                elif email_message.get_content_type() == 'text/html':
+                    html_body = _decode_message_part(email_message)
+                    
+                if not body_text and html_body:
+                    body_text = _extract_text_from_html(html_body)
+                body_text = (body_text or "").strip()
+                
+                is_target_sender = any(em in sender for em in target_emails) or any(dom in sender for dom in target_domains)
+                is_foia_related = "foia" in subject.lower() or "public record" in subject.lower() or "code" in subject.lower()
+                
+                if is_target_sender or has_attachment or is_foia_related:
+                    log_response(
+                        subject=subject,
+                        sender=sender,
+                        has_attachment=has_attachment,
+                        attachment_name=attachment_name,
+                        body=body_text,
+                        imap_uid=uid,
+                        include_metadata=False,
+                        attachment_file=attachment_file
+                    )
+                    if has_attachment:
+                        synced_count += 1
+                        
+            print(f"Retroactive sync complete. Synced {synced_count} attachments.")
+            return {"status": "success", "synced_attachments": synced_count}
+    except Exception as e:
+        print(f"Retroactive sync error: {e}")
+        return {"status": "error", "message": str(e)}
+

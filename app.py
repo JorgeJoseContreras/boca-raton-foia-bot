@@ -5,8 +5,8 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, DATABASE_PATH
-from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, TARGET_MUNICIPALITIES
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, get_response_by_id, DATABASE_PATH
+from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
 
@@ -143,9 +143,10 @@ def sync_historical_inbound_faxes():
         import traceback
         print(f"Error syncing historical faxes: {traceback.format_exc()}")
 
-# Sync historical faxes on startup
+# Sync historical faxes and past email attachments on startup
 from datetime import datetime
 scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
+scheduler.add_job(func=sync_all_past_attachments, trigger="date", run_date=datetime.now())
 
 # Shut down scheduler gracefully
 atexit.register(lambda: scheduler.shutdown())
@@ -342,6 +343,51 @@ def purge_archive_endpoint():
 def trigger_inbox_check():
     res = check_inbox()
     return jsonify(res)
+
+@app.route("/api/sync_attachments", methods=["POST"])
+def trigger_sync_attachments():
+    from datetime import datetime
+    scheduler.add_job(func=sync_all_past_attachments, trigger="date", run_date=datetime.now())
+    return jsonify({"status": "success", "message": "Retroactive attachment sync started in background."})
+
+@app.route("/api/download/attachment/<int:response_id>", methods=["GET"])
+def download_attachment(response_id):
+    resp = get_response_by_id(response_id)
+    if not resp:
+        return jsonify({"status": "error", "message": "Response record not found"}), 404
+    
+    filename = resp.get("attachment_file") or resp.get("attachment_name")
+    if not filename:
+        return jsonify({"status": "error", "message": "No attachment recorded for this response"}), 404
+    
+    file_path = os.path.join(ATTACHMENTS_DIR, filename)
+    
+    # If file is not immediately at direct path, search ATTACHMENTS_DIR
+    if not os.path.exists(file_path):
+        orig_name = resp.get("attachment_name")
+        matched_file = None
+        if os.path.exists(ATTACHMENTS_DIR):
+            for f in os.listdir(ATTACHMENTS_DIR):
+                if f == orig_name or f.endswith(f"_{orig_name}"):
+                    matched_file = f
+                    break
+        if matched_file:
+            filename = matched_file
+            file_path = os.path.join(ATTACHMENTS_DIR, filename)
+        else:
+            # Attempt instant sync for this message
+            sync_all_past_attachments()
+            if os.path.exists(os.path.join(ATTACHMENTS_DIR, filename)):
+                file_path = os.path.join(ATTACHMENTS_DIR, filename)
+            else:
+                return jsonify({"status": "error", "message": "Attachment file could not be found or fetched from server."}), 404
+                
+    download_name = resp.get("attachment_name") or filename
+    if "_" in download_name and download_name.split("_", 1)[0].isdigit():
+        download_name = download_name.split("_", 1)[1]
+        
+    return send_from_directory(ATTACHMENTS_DIR, filename, as_attachment=True, download_name=download_name)
+
 
 @app.route("/api/fax/pdf/<pdf_id>", methods=["GET"])
 def serve_fax_pdf(pdf_id):

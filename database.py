@@ -95,6 +95,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE responses ADD COLUMN attachment_file TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     cursor.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_imap_uid "
         "ON responses(imap_uid) WHERE imap_uid IS NOT NULL"
@@ -214,11 +219,12 @@ def log_request(status, record_type, recipient_email, subject, body_preview, cit
     conn.close()
     return req_id
 
-def log_response(subject, sender, has_attachment, attachment_name="", body="", imap_uid=None, include_metadata=False):
+def log_response(subject, sender, has_attachment, attachment_name="", body="", imap_uid=None, include_metadata=False, attachment_file=""):
     conn = get_connection()
     cursor = conn.cursor()
     normalized_uid = str(imap_uid).strip() if imap_uid is not None and str(imap_uid).strip() else None
     normalized_attachment = attachment_name or ""
+    normalized_attachment_file = attachment_file or ""
 
     if normalized_uid:
         cursor.execute(
@@ -242,13 +248,17 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
                     sender = ?,
                     has_attachment = ?,
                     attachment_name = ?,
+                    attachment_file = CASE
+                        WHEN ? != '' THEN ?
+                        ELSE attachment_file
+                    END,
                     body = CASE
                         WHEN COALESCE(body, '') = '' AND ? != '' THEN ?
                         ELSE body
                     END
                 WHERE id = ?
                 ''',
-                (subject, sender, has_attachment, normalized_attachment, body or "", body or "", existing[0])
+                (subject, sender, has_attachment, normalized_attachment, normalized_attachment_file, normalized_attachment_file, body or "", body or "", existing[0])
             )
             conn.commit()
             conn.close()
@@ -284,6 +294,10 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
                     sender = ?,
                     has_attachment = ?,
                     attachment_name = ?,
+                    attachment_file = CASE
+                        WHEN ? != '' THEN ?
+                        ELSE attachment_file
+                    END,
                     body = CASE
                         WHEN ? != '' THEN ?
                         ELSE body
@@ -296,6 +310,8 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
                     sender,
                     has_attachment,
                     normalized_attachment,
+                    normalized_attachment_file,
+                    normalized_attachment_file,
                     body or "",
                     body or "",
                     legacy_matches[0][0],
@@ -309,10 +325,10 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
 
     cursor.execute(
         '''
-        INSERT INTO responses (subject, sender, has_attachment, attachment_name, imap_uid, body)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO responses (subject, sender, has_attachment, attachment_name, attachment_file, imap_uid, body)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ''',
-        (subject, sender, has_attachment, normalized_attachment, normalized_uid, body)
+        (subject, sender, has_attachment, normalized_attachment, normalized_attachment_file, normalized_uid, body)
     )
     conn.commit()
     response_id = cursor.lastrowid
@@ -320,6 +336,15 @@ def log_response(subject, sender, has_attachment, attachment_name="", body="", i
     if include_metadata:
         return {"id": response_id, "action": "inserted", "body_filled": bool(body)}
     return response_id
+
+def get_response_by_id(response_id):
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM responses WHERE id = ?', (response_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def update_request_by_id(req_id, status=None, body_preview=None, subject=None, pdf_id=None):
     if not req_id:

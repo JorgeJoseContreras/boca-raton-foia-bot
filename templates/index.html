@@ -606,7 +606,10 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #eeeeee; padding-bottom: 8px;">
             <div class="section-title" style="margin: 0; border: none; padding: 0;">Inbox Response Feed</div>
-            <button class="btn btn-outline" id="checkInboxBtn" style="padding: 6px 12px; font-size: 12px;" onclick="checkInbox(this)">Check Inbox for Replies</button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-outline" id="syncAttachmentsBtn" style="padding: 6px 12px; font-size: 12px;" onclick="syncAllAttachments(this)">Sync Past Attachments</button>
+                <button class="btn btn-outline" id="checkInboxBtn" style="padding: 6px 12px; font-size: 12px;" onclick="checkInbox(this)">Check Inbox for Replies</button>
+            </div>
         </div>
         <div class="feed-container">
             {% if responses %}
@@ -617,8 +620,13 @@
                         <span>{{ resp.timestamp }}</span>
                     </div>
                     <div class="feed-subject">{{ resp.subject }}</div>
-                    {% if resp.has_attachment %}
-                    <div class="attachment">Attachment: {{ resp.attachment_name }}</div>
+                    {% if resp.has_attachment and resp.attachment_name %}
+                    <div class="attachment" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; padding: 6px 10px; background: #eef3f8; border-radius: 4px; border-left: 3px solid #2b5797;">
+                        <span>📎 <strong>{{ resp.attachment_name }}</strong></span>
+                        <a href="/api/download/attachment/{{ resp.id }}" class="btn" style="padding: 4px 10px; font-size: 11px; border-radius: 4px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: white; background: #2b5797;" onclick="event.stopPropagation()" target="_blank">
+                            ⬇️ Download
+                        </a>
+                    </div>
                     {% endif %}
                     <div class="feed-body">{% if resp.body %}{{ resp.body | e }}{% else %}<em style="color: #666;">No message body captured yet. Click “Check Inbox for Replies” to refresh this entry.</em>{% endif %}</div>
                 </div>
@@ -883,6 +891,26 @@
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = 'Check Inbox for Replies';
+                }
+            }
+        }
+
+        async function syncAllAttachments(btn) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span>Syncing...';
+            }
+            showToast("Retroactively downloading all past email attachments from inbox...");
+            try {
+                const res = await fetch('/api/sync_attachments', { method: 'POST' });
+                const data = await res.json();
+                showToast(data.message || "Syncing past attachments in background.");
+                setTimeout(() => location.reload(), 3000);
+            } catch (err) {
+                showToast("Error starting attachment sync.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Sync Past Attachments';
                 }
             }
         }
