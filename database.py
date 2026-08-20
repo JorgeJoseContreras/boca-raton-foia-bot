@@ -17,7 +17,14 @@ DEFAULT_TEMPLATE = (
 )
 
 def get_connection():
-    return sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=60.0)
+    try:
+        conn.execute("PRAGMA journal_mode = WAL")
+        conn.execute("PRAGMA busy_timeout = 60000")
+        conn.execute("PRAGMA synchronous = NORMAL")
+    except Exception:
+        pass
+    return conn
 
 def init_db():
     conn = get_connection()
