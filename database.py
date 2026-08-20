@@ -69,6 +69,21 @@ def init_db():
         )
     ''')
 
+    try:
+        cursor.execute("ALTER TABLE archived_requests ADD COLUMN city_name TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE archived_requests ADD COLUMN pdf_id TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE archived_requests ADD COLUMN batch_id TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     # Table for tracking email responses and attachments
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS responses (
@@ -486,17 +501,29 @@ def purge_archived_requests():
 def get_last_sent_timestamps():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        SELECT city_name, MAX(timestamp) as last_ts
-        FROM (
-            SELECT city_name, timestamp FROM requests
-            UNION ALL
-            SELECT city_name, timestamp FROM archived_requests
-        )
-        WHERE city_name IS NOT NULL AND city_name != ''
-        GROUP BY city_name
-    ''')
-    rows = cursor.fetchall()
+    try:
+        cursor.execute('''
+            SELECT city_name, MAX(timestamp) as last_ts
+            FROM (
+                SELECT city_name, timestamp FROM requests
+                UNION ALL
+                SELECT city_name, timestamp FROM archived_requests
+            )
+            WHERE city_name IS NOT NULL AND city_name != ''
+            GROUP BY city_name
+        ''')
+        rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        try:
+            cursor.execute('''
+                SELECT city_name, MAX(timestamp) as last_ts
+                FROM requests
+                WHERE city_name IS NOT NULL AND city_name != ''
+                GROUP BY city_name
+            ''')
+            rows = cursor.fetchall()
+        except sqlite3.OperationalError:
+            rows = []
     conn.close()
     
     last_sent = {}
