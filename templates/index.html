@@ -492,7 +492,6 @@
             <div class="section-title" style="margin: 0; border: none; padding: 0;">Outgoing Requests Log Across All Cities</div>
             <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: #dc2626; border-color: #fca5a5;" onclick="clearRequestLog()">Clear Log</button>
         </div>
-        {% if request_groups %}
         <table class="data-table" id="logTable">
             <thead>
                 <tr>
@@ -506,7 +505,8 @@
                     <th style="width: 95px; text-align: center;">Document</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="logTableBody">
+                {% if request_groups %}
                 {% for grp in request_groups %}
                 {% if grp.is_bulk %}
                 <!-- Bulk batch summary row -->
@@ -598,11 +598,13 @@
                 </tr>
                 {% endif %}
                 {% endfor %}
+                {% else %}
+                <tr id="emptyLogPlaceholder">
+                    <td colspan="8" style="text-align: center; color: #777; font-style: italic; padding: 20px;">No public records requests have been dispatched yet.</td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
-        {% else %}
-        <p style="color: #777; font-style: italic;">No public records requests have been dispatched yet.</p>
-        {% endif %}
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid #eeeeee; padding-bottom: 8px;">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -933,52 +935,142 @@
                 showToast(data.message);
                 setTimeout(() => location.reload(), 3000);
             } catch (err) {
-                showToast("Error triggering batch fax dispatch.");
-            }
-        }
-
-        async function refreshRequestsTable() {
+                showToast("Error triggering batch fax dispatch        async function refreshRequestsTable() {
             try {
                 const res = await fetch('/api/requests');
                 const data = await res.json();
                 if (data.status === 'success' && data.requests) {
-                    const tbody = document.querySelector('table.data-table tbody');
+                    const tbody = document.getElementById('logTableBody') || document.querySelector('table.data-table tbody');
                     if (tbody) {
-                        tbody.innerHTML = data.requests.map(req => {
-                            let statusBadge = '';
-                            const st = (req.status || '').toLowerCase();
-                            if (st === 'sending...' || st === 'sending') {
-                                statusBadge = '<span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>';
-                            } else if (st === 'sent') {
-                                statusBadge = '<span class="status-badge status-sent">Sent</span>';
-                            } else if (st === 'delivered') {
-                                statusBadge = '<span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>';
-                            } else if (st === 'failed') {
-                                statusBadge = '<span class="status-badge status-failed">Failed</span>';
-                            } else {
-                                statusBadge = `<span class="status-badge">${req.status}</span>`;
-                            }
+                        if (data.requests.length === 0) {
+                            tbody.innerHTML = '<tr id="emptyLogPlaceholder"><td colspan="8" style="text-align: center; color: #777; font-style: italic; padding: 20px;">No public records requests have been dispatched yet.</td></tr>';
+                        } else {
+                            // Remember currently expanded batch IDs
+                            const expandedBatches = new Set();
+                            document.querySelectorAll('.bulk-child-row').forEach(r => {
+                                if (r.style.display !== 'none') {
+                                    expandedBatches.add(r.getAttribute('data-batch'));
+                                }
+                            });
 
-                            let docCol = '';
-                            if (req.pdf_id) {
-                                docCol = `<a href="/api/fax/pdf/${req.pdf_id}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>`;
-                            } else if ((req.recipient_email || '').startsWith('+') || (req.record_type || '').includes('Fax') || (req.body_preview || '').includes('Fax ID:')) {
-                                docCol = '<span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>';
-                            } else {
-                                docCol = '<span style="font-size: 11px; color: #888;">Email</span>';
-                            }
+                            // Group items by batch_id
+                            const groups = {};
+                            const groupOrder = [];
+                            data.requests.forEach(req => {
+                                const bid = req.batch_id || `solo_${req.id}`;
+                                if (!groups[bid]) {
+                                    groups[bid] = [];
+                                    groupOrder.push(bid);
+                                }
+                                groups[bid].push(req);
+                            });
 
-                            return `<tr>
-                                <td>${req.id}</td>
-                                <td><span style="font-weight: 500;">${req.timestamp || ''}</span></td>
-                                <td><strong>${req.city_name || 'City of Boca Raton'}</strong></td>
-                                <td>${statusBadge}</td>
-                                <td><code>${req.recipient_email || ''}</code></td>
-                                <td>${req.subject || ''}</td>
-                                <td style="color: #555;">${req.body_preview || ''}</td>
-                                <td style="text-align: center;">${docCol}</td>
-                            </tr>`;
-                        }).join('');
+                            let html = '';
+                            groupOrder.forEach(bid => {
+                                const items = groups[bid];
+                                const isBulk = items.length > 1 && !bid.startsWith('solo_');
+                                if (isBulk) {
+                                    const sent = items.filter(r => (r.status || '').toLowerCase() === 'sent').length;
+                                    const failed = items.filter(r => (r.status || '').toLowerCase() === 'failed').length;
+                                    const sending = items.filter(r => (r.status || '').toLowerCase().includes('sending')).length;
+                                    
+                                    let bulkBadge = '';
+                                    if (sending > 0) {
+                                        bulkBadge = '<span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>';
+                                    } else if (failed > 0 && sent === 0) {
+                                        bulkBadge = '<span class="status-badge status-failed">Failed</span>';
+                                    } else if (failed > 0) {
+                                        bulkBadge = `<span class="status-badge status-sent" style="background:#dcfce7;color:#15803d;border-color:#bbf7d0;">${sent} Sent / ${failed} Failed</span>`;
+                                    } else {
+                                        bulkBadge = `<span class="status-badge status-sent">${sent} Sent</span>`;
+                                    }
+
+                                    const isExpanded = expandedBatches.has(bid);
+                                    const arrowIcon = isExpanded ? '&#9650;' : '&#9660;';
+                                    const childDisplay = isExpanded ? '' : 'none';
+
+                                    html += `<tr class="bulk-summary-row" onclick="toggleBatch('${bid}')" style="cursor: pointer; background: #f0f7ff;">
+                                        <td style="text-align: center; color: #555;"><span id="arrow-${bid}" style="font-size: 14px;">${arrowIcon}</span></td>
+                                        <td><span style="font-weight: 500;">${items[0].timestamp || ''}</span></td>
+                                        <td><strong>Bulk Dispatch — ${items.length} Municipalities</strong></td>
+                                        <td>${bulkBadge}</td>
+                                        <td colspan="4" style="color: #666; font-size: 12px;">Click to expand individual city results</td>
+                                    </tr>`;
+
+                                    items.forEach(req => {
+                                        let docCol = '';
+                                        if (req.pdf_id) {
+                                            docCol = `<a href="/api/fax/pdf/${req.pdf_id}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>`;
+                                        } else if ((req.recipient_email || '').startsWith('+') || (req.record_type || '').includes('Fax') || (req.body_preview || '').includes('Fax ID:')) {
+                                            docCol = '<span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>';
+                                        } else {
+                                            docCol = '<span style="font-size: 11px; color: #888;">Email</span>';
+                                        }
+
+                                        let stBadge = '';
+                                        const st = (req.status || '').toLowerCase();
+                                        if (st.includes('sending')) {
+                                            stBadge = '<span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>';
+                                        } else if (st === 'sent') {
+                                            stBadge = '<span class="status-badge status-sent">Sent</span>';
+                                        } else if (st === 'delivered') {
+                                            stBadge = '<span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>';
+                                        } else if (st === 'failed') {
+                                            stBadge = '<span class="status-badge status-failed">Failed</span>';
+                                        } else {
+                                            stBadge = `<span class="status-badge">${req.status || ''}</span>`;
+                                        }
+
+                                        html += `<tr class="bulk-child-row" data-batch="${bid}" style="display: ${childDisplay}; background: #f8fbff;">
+                                            <td style="text-align: center; color: #aaa; font-size: 11px; padding-left: 24px;">↳</td>
+                                            <td><span style="font-size: 12px; color: #555;">${req.timestamp || ''}</span></td>
+                                            <td><strong>${req.city_name || 'City of Boca Raton'}</strong></td>
+                                            <td>${stBadge}</td>
+                                            <td><code>${req.recipient_email || ''}</code></td>
+                                            <td>${req.subject || ''}</td>
+                                            <td style="color: #555;">${req.body_preview || ''}</td>
+                                            <td style="text-align: center;">${docCol}</td>
+                                        </tr>`;
+                                    });
+                                } else {
+                                    const req = items[0];
+                                    let docCol = '';
+                                    if (req.pdf_id) {
+                                        docCol = `<a href="/api/fax/pdf/${req.pdf_id}" target="_blank" class="btn btn-outline" style="padding: 3px 8px; font-size: 11px; white-space: nowrap; text-decoration: none; display: inline-block;">View PDF</a>`;
+                                    } else if ((req.recipient_email || '').startsWith('+') || (req.record_type || '').includes('Fax') || (req.body_preview || '').includes('Fax ID:')) {
+                                        docCol = '<span style="font-size: 11px; color: #666; font-style: italic;">Fax Sent</span>';
+                                    } else {
+                                        docCol = '<span style="font-size: 11px; color: #888;">Email</span>';
+                                    }
+
+                                    let stBadge = '';
+                                    const st = (req.status || '').toLowerCase();
+                                    if (st.includes('sending')) {
+                                        stBadge = '<span class="status-badge status-sending"><span class="badge-spinner"></span> Sending</span>';
+                                    } else if (st === 'sent') {
+                                        stBadge = '<span class="status-badge status-sent">Sent</span>';
+                                    } else if (st === 'delivered') {
+                                        stBadge = '<span class="status-badge status-sent" style="background-color: #dcfce7; color: #15803d; border-color: #bbf7d0;">Delivered</span>';
+                                    } else if (st === 'failed') {
+                                        stBadge = '<span class="status-badge status-failed">Failed</span>';
+                                    } else {
+                                        stBadge = `<span class="status-badge">${req.status || ''}</span>`;
+                                    }
+
+                                    html += `<tr>
+                                        <td>${req.id}</td>
+                                        <td><span style="font-weight: 500;">${req.timestamp || ''}</span></td>
+                                        <td><strong>${req.city_name || 'City of Boca Raton'}</strong></td>
+                                        <td>${stBadge}</td>
+                                        <td><code>${req.recipient_email || ''}</code></td>
+                                        <td>${req.subject || ''}</td>
+                                        <td style="color: #555;">${req.body_preview || ''}</td>
+                                        <td style="text-align: center;">${docCol}</td>
+                                    </tr>`;
+                                }
+                            });
+                            tbody.innerHTML = html;
+                        }
                     }
 
                     if (data.last_sent) {
@@ -992,13 +1084,16 @@
 
                     const hasSending = data.requests.some(r => (r.status || '').toLowerCase().includes('sending'));
                     if (hasSending) {
-                        setTimeout(refreshRequestsTable, 1500);
+                        setTimeout(refreshRequestsTable, 2000);
                     }
                 }
             } catch (err) {
                 console.error("Error refreshing requests table:", err);
             }
         }
+
+        // Auto-refresh the log table every 10 seconds
+        setInterval(refreshRequestsTable, 10000);
 
         async function sendSingleCity(btn, cityName) {
             if (btn) {
@@ -1042,7 +1137,7 @@
                 const res = await fetch('/api/clear_logs', { method: 'POST' });
                 const data = await res.json();
                 showToast(data.message || "Logs cleared.");
-                setTimeout(() => location.reload(), 800);
+                await refreshRequestsTable();
             } catch (err) {
                 showToast("Error clearing request logs.");
             }

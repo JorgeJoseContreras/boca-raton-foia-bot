@@ -202,10 +202,6 @@ def index():
     last_sent = get_last_sent_timestamps()
     inbound_faxes = get_all_inbound_faxes()
 
-    # Trigger background check to pull any new historical faxes from Telnyx API
-    from datetime import datetime
-    scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
-
     return render_template(
         "index.html",
         requests=raw_requests,
@@ -271,16 +267,18 @@ def generate_preview():
 def trigger_request():
     data = request.get_json(silent=True) or {}
     drafts_list = data.get("drafts", [])
-    custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d}
-    print(f"DEBUG: /api/trigger received drafts for: {list(custom_drafts.keys())}")
+    custom_drafts = {d["city"]: {"subject": d["subject"], "body": d["body"]} for d in drafts_list if "city" in d} if drafts_list else None
+    print(f"DEBUG: /api/trigger received drafts for: {list(custom_drafts.keys()) if custom_drafts else 'ALL'}")
     
-    from datetime import datetime
-    scheduler.add_job(
-        func=send_all_foia_requests,
-        trigger="date",
-        run_date=datetime.now(),
-        kwargs={"custom_drafts": custom_drafts}
-    )
+    def run_batch_dispatch():
+        try:
+            send_all_foia_requests(custom_drafts=custom_drafts)
+        except Exception as e:
+            import traceback
+            print(f"[BATCH DISPATCH ERROR] {traceback.format_exc()}")
+            
+    t = threading.Thread(target=run_batch_dispatch, daemon=True)
+    t.start()
     
     return jsonify({"status": "success", "message": "Multi-City FOIA dispatch triggered."})
 
