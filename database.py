@@ -489,9 +489,9 @@ def get_last_sent_timestamps():
     cursor.execute('''
         SELECT city_name, MAX(timestamp) as last_ts
         FROM (
-            SELECT city_name, timestamp FROM requests WHERE status IN ('Sent', 'Sending', 'Failed')
+            SELECT city_name, timestamp FROM requests
             UNION ALL
-            SELECT city_name, timestamp FROM archived_requests WHERE status IN ('Sent', 'Sending', 'Failed')
+            SELECT city_name, timestamp FROM archived_requests
         )
         WHERE city_name IS NOT NULL AND city_name != ''
         GROUP BY city_name
