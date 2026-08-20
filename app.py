@@ -302,17 +302,26 @@ def trigger_single_request():
     if not target:
         return jsonify({"status": "error", "message": f"Municipality {city_name} not found"}), 404
         
-    print(f"[SINGLE DISPATCH] Triggering FOIA request for: {city_name}")
+    print(f"[SINGLE DISPATCH] Running direct FOIA dispatch for: {city_name}")
     custom_drafts = {city_name: {}}
-    from datetime import datetime
-    scheduler.add_job(
-        func=send_all_foia_requests,
-        trigger="date",
-        run_date=datetime.now(),
-        kwargs={"custom_drafts": custom_drafts}
-    )
     
-    return jsonify({"status": "success", "message": f"FOIA request triggered for {city_name}."})
+    try:
+        dispatch_res = send_all_foia_requests(custom_drafts=custom_drafts)
+        print(f"[SINGLE DISPATCH RESULT] for {city_name}: {dispatch_res}")
+        return jsonify({
+            "status": "success",
+            "message": f"FOIA request dispatched to {city_name}.",
+            "result": dispatch_res
+        })
+    except Exception as e:
+        import traceback
+        err_trace = traceback.format_exc()
+        print(f"[SINGLE DISPATCH ERROR] {err_trace}")
+        return jsonify({
+            "status": "error",
+            "message": f"Failed to dispatch to {city_name}: {str(e)}",
+            "trace": err_trace
+        }), 500
 
 @app.route("/api/schedule", methods=["GET", "POST"])
 def manage_schedule():

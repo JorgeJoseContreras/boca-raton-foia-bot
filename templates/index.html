@@ -1014,20 +1014,10 @@
                 });
                 const data = await res.json();
                 showToast(data.message || `Dispatched to ${cityName}`);
-                
-                // Refresh table progressively to catch status transitions
-                setTimeout(refreshRequestsTable, 500);
-                setTimeout(refreshRequestsTable, 2000);
-                setTimeout(refreshRequestsTable, 4000);
-                setTimeout(() => {
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = 'Send';
-                    }
-                    refreshRequestsTable();
-                }, 6000);
+                await refreshRequestsTable();
             } catch (err) {
                 showToast("Error triggering single city request.");
+            } finally {
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = 'Send';
