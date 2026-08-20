@@ -100,6 +100,11 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    try:
+        cursor.execute("ALTER TABLE responses ADD COLUMN is_deleted BOOLEAN DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
     cursor.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_responses_imap_uid "
         "ON responses(imap_uid) WHERE imap_uid IS NOT NULL"
@@ -404,11 +409,17 @@ def get_all_requests():
         result.append(d)
     return result
 
-def get_all_responses():
+def get_all_responses(include_deleted=False):
     conn = get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM responses ORDER BY id DESC')
+    try:
+        if include_deleted:
+            cursor.execute('SELECT * FROM responses ORDER BY id DESC')
+        else:
+            cursor.execute('SELECT * FROM responses WHERE is_deleted = 0 ORDER BY id DESC')
+    except sqlite3.OperationalError:
+        cursor.execute('SELECT * FROM responses ORDER BY id DESC')
     rows = cursor.fetchall()
     conn.close()
     result = []
@@ -417,6 +428,26 @@ def get_all_responses():
         d["timestamp"] = format_eastern_timestamp(d.get("timestamp"))
         result.append(d)
     return result
+
+def delete_response_by_id(resp_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('UPDATE responses SET is_deleted = 1 WHERE id = ?', (resp_id,))
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    conn.close()
+
+def restore_response_by_id(resp_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('UPDATE responses SET is_deleted = 0 WHERE id = ?', (resp_id,))
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    conn.close()
 
 def clear_all_requests():
     conn = get_connection()

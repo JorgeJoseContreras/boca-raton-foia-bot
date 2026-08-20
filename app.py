@@ -5,7 +5,7 @@ import os
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, get_response_by_id, DATABASE_PATH
+from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, get_response_by_id, DATABASE_PATH, delete_response_by_id, restore_response_by_id
 from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
@@ -228,7 +228,8 @@ def settings_page():
         "fax_coral_springs", "fax_boynton_beach", "fax_pompano_beach", "fax_sea_ranch_lakes", "fax_lauderhill", "fax_aventura"
     ]
     settings = {k: get_setting(k, "") for k in all_keys}
-    return render_template("settings.html", settings=settings)
+    deleted_responses = [r for r in get_all_responses(include_deleted=True) if r.get("is_deleted") == 1]
+    return render_template("settings.html", settings=settings, deleted_responses=deleted_responses)
 
 @app.route("/api/settings", methods=["POST"])
 def save_settings_route():
@@ -236,6 +237,16 @@ def save_settings_route():
     for key, val in data.items():
         set_setting(key, val)
     return jsonify({"status": "success", "message": "Settings saved successfully."})
+
+@app.route("/api/responses/delete/<int:response_id>", methods=["POST"])
+def delete_response_endpoint(response_id):
+    delete_response_by_id(response_id)
+    return jsonify({"status": "success", "message": "Response deleted successfully."})
+
+@app.route("/api/responses/restore/<int:response_id>", methods=["POST"])
+def restore_response_endpoint(response_id):
+    restore_response_by_id(response_id)
+    return jsonify({"status": "success", "message": "Response restored successfully."})
 
 @app.route("/api/preview", methods=["POST", "GET"])
 def generate_preview():
