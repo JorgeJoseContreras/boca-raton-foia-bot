@@ -290,6 +290,32 @@ def serve_inbound_fax(filename):
     filename = os.path.basename(filename)
     return send_from_directory(inbound_dir, filename)
 
+def execute_single_dispatch(city_name):
+    print(f"[SINGLE DISPATCH] Starting FOIA dispatch for municipality: '{city_name}'...")
+    target = next((m for m in TARGET_MUNICIPALITIES if m["name"] == city_name), None)
+    if not target:
+        print(f"[SINGLE DISPATCH ERROR] Municipality '{city_name}' not found in TARGET_MUNICIPALITIES.")
+        return
+        
+    dispatch_type = target.get("type", "email")
+    is_fax = dispatch_type == "fax" or target["email"].startswith("+")
+    
+    try:
+        if is_fax:
+            from fax_engine import get_city_fax_number, send_single_foia_fax
+            fax_num = get_city_fax_number(city_name) or target["email"]
+            print(f"[SINGLE DISPATCH] Sending Fax to {city_name} at {fax_num}...")
+            res = send_single_foia_fax(city_name, target_fax_number=fax_num)
+            print(f"[SINGLE DISPATCH] Fax result for {city_name}: {res}")
+        else:
+            from email_engine import send_single_foia_email
+            print(f"[SINGLE DISPATCH] Sending Email to {city_name} at {target['email']}...")
+            res = send_single_foia_email(city_name, target["email"])
+            print(f"[SINGLE DISPATCH] Email result for {city_name}: {res}")
+    except Exception as e:
+        import traceback
+        print(f"[SINGLE DISPATCH EXCEPTION] Uncaught error during dispatch for {city_name}: {traceback.format_exc()}")
+
 @app.route("/api/trigger_single", methods=["POST"])
 def trigger_single_request():
     data = request.get_json(silent=True) or {}
@@ -302,20 +328,9 @@ def trigger_single_request():
     if not target:
         return jsonify({"status": "error", "message": f"Municipality {city_name} not found"}), 404
         
-    def send_single_task():
-        if target.get("type") == "fax":
-            from fax_engine import get_city_fax_number
-            fax_num = get_city_fax_number(city_name) or target["email"]
-            send_single_foia_fax(city_name, target_fax_number=fax_num)
-        else:
-            send_single_foia_email(city_name, target["email"])
-                
-    from datetime import datetime
-    scheduler.add_job(
-        func=send_single_task,
-        trigger="date",
-        run_date=datetime.now()
-    )
+    # Launch dispatch immediately in a dedicated background daemon thread
+    thread = threading.Thread(target=execute_single_dispatch, args=(city_name,), daemon=True)
+    thread.start()
     
     return jsonify({"status": "success", "message": f"FOIA request triggered for {city_name}."})
 
@@ -333,7 +348,8 @@ def manage_schedule():
 @app.route("/api/requests", methods=["GET"])
 def get_requests_api():
     requests_list = get_all_requests()
-    return jsonify({"status": "success", "requests": requests_list})
+    last_sent_map = get_last_sent_timestamps()
+    return jsonify({"status": "success", "requests": requests_list, "last_sent": last_sent_map})
 
 @app.route("/api/clear_logs", methods=["POST"])
 def clear_logs_endpoint():
