@@ -3,7 +3,7 @@ services:
     name: boca-raton-foia-bot
     env: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn app:app"
+    startCommand: "gunicorn --workers 2 --threads 4 --timeout 120 app:app"
     envVars:
       - key: SENDER_EMAIL
         value: "jorge.properties.123@gmail.com"

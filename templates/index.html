@@ -1014,10 +1014,20 @@
                 });
                 const data = await res.json();
                 showToast(data.message || `Dispatched to ${cityName}`);
-                await refreshRequestsTable();
+                
+                // Poll table progressively to catch background dispatch completion
+                setTimeout(refreshRequestsTable, 600);
+                setTimeout(refreshRequestsTable, 2000);
+                setTimeout(refreshRequestsTable, 4500);
+                setTimeout(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Send';
+                    }
+                    refreshRequestsTable();
+                }, 6000);
             } catch (err) {
                 showToast("Error triggering single city request.");
-            } finally {
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = 'Send';
