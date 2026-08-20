@@ -688,3 +688,118 @@ def sync_all_past_attachments():
         print(f"Retroactive sync error: {e}")
         return {"status": "error", "message": str(e)}
 
+def retroactive_sync_bodies():
+    """
+    Connects via IMAP, finds all responses in the database with missing or empty bodies,
+    and searches the mailbox for matching messages to sync their bodies.
+    """
+    from database import get_connection
+    import sqlite3
+    
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT id, subject, sender FROM responses WHERE COALESCE(body, '') = ''")
+        empty_rows = cursor.fetchall()
+    except sqlite3.OperationalError:
+        empty_rows = []
+    conn.close()
+    
+    if not empty_rows:
+        print("No empty response bodies found to sync.")
+        return {"status": "success", "message": "No empty response bodies found to sync."}
+        
+    print(f"Found {len(empty_rows)} responses with empty bodies to sync.")
+    
+    imap_server = os.getenv("IMAP_SERVER", "imap.gmail.com")
+    email_user = os.getenv("SENDER_EMAIL")
+    email_pass = os.getenv("SENDER_PASSWORD")
+    
+    if not email_user or not email_pass:
+        return {"status": "error", "message": "IMAP credentials not configured"}
+        
+    updated_count = 0
+    try:
+        with IMAPClient(imap_server, use_uid=True) as server:
+            server.login(email_user, email_pass)
+            server.select_folder('INBOX')
+            
+            inbox_uids = server.search(['ALL'])
+            print(f"Scanning {len(inbox_uids)} total emails for matching subjects...")
+            
+            chunk_size = 100
+            uid_chunks = [inbox_uids[i:i + chunk_size] for i in range(0, len(inbox_uids), chunk_size)]
+            
+            subject_map = {}
+            
+            for chunk in uid_chunks:
+                fetch_data = server.fetch(chunk, ['ENVELOPE'])
+                for uid, msg_data in fetch_data.items():
+                    envelope = msg_data.get(b'ENVELOPE')
+                    if not envelope:
+                        continue
+                    
+                    subj_bytes = envelope.subject
+                    subj = ""
+                    if subj_bytes:
+                        decoded_list = decode_header(subj_bytes.decode('utf-8', errors='ignore'))
+                        subj_part, enc = decoded_list[0]
+                        if isinstance(subj_part, bytes):
+                            subj = subj_part.decode(enc if enc else 'utf-8', errors='ignore')
+                        else:
+                            subj = subj_part
+                    
+                    subj_clean = subj.lower().strip()
+                    subject_map[subj_clean] = uid
+            
+            for row in empty_rows:
+                row_id = row['id']
+                row_subj = row['subject'].lower().strip()
+                
+                matched_uid = subject_map.get(row_subj)
+                if matched_uid:
+                    fetch_msg = server.fetch([matched_uid], 'RFC822')
+                    if fetched_data := fetch_msg.get(matched_uid):
+                        email_message = email.message_from_bytes(fetched_data[b'RFC822'])
+                        body_text = ""
+                        html_body = ""
+                        
+                        if email_message.is_multipart():
+                            for part in email_message.walk():
+                                if part.get_content_maintype() == 'multipart':
+                                    continue
+                                content_type = part.get_content_type()
+                                if content_type == 'text/plain' and not body_text:
+                                    body_text = _decode_message_part(part)
+                                elif content_type == 'text/html' and not html_body:
+                                    html_body = _decode_message_part(part)
+                        else:
+                            if email_message.get_content_type() == 'text/plain':
+                                body_text = _decode_message_part(email_message)
+                            elif email_message.get_content_type() == 'text/html':
+                                html_body = _decode_message_part(email_message)
+                                
+                        if not body_text and html_body:
+                            body_text = _extract_text_from_html(html_body)
+                        body_text = (body_text or "").strip()
+                        
+                        if body_text:
+                            conn = get_connection()
+                            cursor = conn.cursor()
+                            cursor.execute(
+                                "UPDATE responses SET body = ?, imap_uid = ? WHERE id = ?",
+                                (body_text, str(matched_uid), row_id)
+                            )
+                            conn.commit()
+                            conn.close()
+                            updated_count += 1
+                            print(f"Successfully backfilled body for response ID {row_id} using IMAP UID {matched_uid}.")
+                            
+    except Exception as e:
+        import traceback
+        print(f"Error in retroactive body sync: {traceback.format_exc()}")
+        
+    print(f"Retroactive body sync completed. Updated {updated_count} responses.")
+    return {"status": "success", "updated_count": updated_count}
+

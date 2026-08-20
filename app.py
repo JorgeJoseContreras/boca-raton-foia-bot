@@ -6,7 +6,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, get_response_by_id, DATABASE_PATH, delete_response_by_id, restore_response_by_id
-from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES
+from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES, retroactive_sync_bodies
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
 
@@ -147,6 +147,7 @@ def sync_historical_inbound_faxes():
 from datetime import datetime
 scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
 scheduler.add_job(func=sync_all_past_attachments, trigger="date", run_date=datetime.now())
+scheduler.add_job(func=retroactive_sync_bodies, trigger="date", run_date=datetime.now())
 
 # Shut down scheduler gracefully
 atexit.register(lambda: scheduler.shutdown())
@@ -353,6 +354,9 @@ def purge_archive_endpoint():
 @app.route("/api/check_inbox", methods=["POST"])
 def trigger_inbox_check():
     res = check_inbox()
+    # Trigger background check to pull any missing bodies for past response entries
+    from datetime import datetime
+    scheduler.add_job(func=retroactive_sync_bodies, trigger="date", run_date=datetime.now())
     return jsonify(res)
 
 @app.route("/api/sync_attachments", methods=["POST"])
