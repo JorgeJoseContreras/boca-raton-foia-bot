@@ -280,7 +280,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         )
         
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-2.0-flash',
             contents=prompt,
         )
         
