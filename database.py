@@ -195,8 +195,33 @@ def init_db():
         cursor.execute("UPDATE settings SET value = ? WHERE key = 'foia_template'", (DEFAULT_TEMPLATE,))
         
     # Force update any custom template email address typos
-    cursor.execute("UPDATE settings SET value = replace(value, 'jorge.properties.123@gmail.com', 'jorge.property.123@gmail.com') WHERE key = 'foia_template'")
-
+    # One-time wipe for the 51 specified cities
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'one_time_wipe_51_cities'")
+        row = cursor.fetchone()
+        if not row:
+            wipe_cities = [
+                "City of Homestead", "City of Atlantis", "City of Avon Park", "City of Key West",
+                "City of Hallandale Beach", "City of Winter Haven", "Town of Jupiter", "City of Sebring",
+                "City of Daytona Beach", "City of Cooper City", "City of Fort Pierce", "City of Jacksonville",
+                "City of Hialeah Gardens", "City of Melbourne", "City of Oakland Park", "City of Miami Gardens",
+                "City of Westlake", "City of Titusville", "Village of Tequesta", "Village of Golf",
+                "Town of Ocean Breeze", "Town of Pembroke Park", "Town of South Palm Beach", "Town of Southwest Ranches",
+                "Town of West Miami", "Village of Bal Harbour", "Village of Biscayne Park", "City of Wilton Manors",
+                "Town of Cloud Lake", "Town of Bay Harbor Islands", "Town of Cutler Bay", "Town of Glen Ridge",
+                "Town of Golden Beach", "Town of Hypoluxo", "Town of Haverhill", "Town of Juno Beach",
+                "Town of Lake Clarke Shores", "Town of Jupiter Inlet Colony", "Town of Loxahatchee Groves", "Town of Manalapan",
+                "Town of Lantana", "Town of Medley", "Town of Lauderdale-by-the-Sea", "City of Ocala",
+                "City of Okeechobee", "City of Port St. Lucie", "City of Sebastian", "City of South Bay",
+                "City of Sweetwater", "City of Naples", "City of Pembroke Pines"
+            ]
+            for city in wipe_cities:
+                cursor.execute("DELETE FROM requests WHERE city_name = ?", (city,))
+                cursor.execute("DELETE FROM archived_requests WHERE city_name = ?", (city,))
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('one_time_wipe_51_cities', 'done')")
+            print("Successfully wiped database logs for the 51 specified cities.")
+    except Exception as e:
+        print(f"Error during one-time wipe: {e}")
 
     conn.commit()
     conn.close()
