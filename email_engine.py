@@ -190,7 +190,8 @@ TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@my
 
 TARGET_COUNTIES = [
     {"name": "Alachua County", "email": "osr@alachuaclerk.org", "type": "email"},
-    {"name": "Brevard County", "email": "PublicRecordsRequests@brevardclerk.us", "type": "email"},
+    {"name": "Brevard County", "email": "", "type": "none"},
+    {"name": "Broward County", "email": "", "type": "none"},
     {"name": "Collier County", "email": "PublicRecordRequest@collier.gov", "type": "email"},
     {"name": "Duval County", "email": "public.info@duvalclerk.com", "type": "email"},
     {"name": "Escambia County", "email": "admin@myescambia.com", "type": "email"},
@@ -198,19 +199,23 @@ TARGET_COUNTIES = [
     {"name": "Highlands County", "email": "clkbusor@hcclerk.org", "type": "email"},
     {"name": "Hillsborough County", "email": "publicrecords@hillsclerk.com", "type": "email"},
     {"name": "Indian River County", "email": "clerk@indianriverclerk.com", "type": "email"},
+    {"name": "Lee County", "email": "", "type": "none"},
     {"name": "Leon County", "email": "BOCCPublicRecordsRequests@leoncountyfl.gov", "type": "email"},
     {"name": "Manatee County", "email": "public.records@mymanatee.org", "type": "email"},
     {"name": "Marion County", "email": "PublicRecords@MarionFL.org", "type": "email"},
     {"name": "Martin County", "email": "RecordRequest@MartinClerk.com", "type": "email"},
     {"name": "Miami-Dade County", "email": "cocpubreq@miamidadeclerk.gov", "type": "email"},
+    {"name": "Monroe County", "email": "", "type": "none"},
     {"name": "Okeechobee County", "email": "records@myokeeclerk.com", "type": "email"},
     {"name": "Orange County", "email": "PublicRecordRequest@ocfl.net", "type": "email"},
+    {"name": "Osceola County", "email": "", "type": "none"},
     {"name": "Palm Beach County", "email": "publicrecords@mypalmbeachclerk.com", "type": "email"},
     {"name": "Pinellas County", "email": "clerkinfo@mypinellasclerk.gov", "type": "email"},
     {"name": "Polk County", "email": "Records@PolkClerkFL.gov", "type": "email"},
     {"name": "Sarasota County", "email": "PublicRecords@scgov.net", "type": "email"},
     {"name": "St. Johns County", "email": "publicrecords@sjcfl.us", "type": "email"},
-    {"name": "St. Lucie County", "email": "aghlc.nm@gmail.com", "type": "email"}
+    {"name": "St. Lucie County", "email": "aghlc.nm@gmail.com", "type": "email"},
+    {"name": "Volusia County", "email": "", "type": "none"}
 ]
 
 def send_telegram_notification(message):
