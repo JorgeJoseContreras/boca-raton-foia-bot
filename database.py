@@ -297,6 +297,22 @@ def init_db():
     except Exception as e:
         print(f"Error during one-time wipe of 12 disabled cities: {e}")
 
+    # One-time wipe for 3 additional disabled cities (moving to bottom/Never)
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'one_time_wipe_3_more_disabled'")
+        row = cursor.fetchone()
+        if not row:
+            wipe_cities_3 = [
+                "City of Pompano Beach", "City of Aventura", "Village of Sea Ranch Lakes"
+            ]
+            for city in wipe_cities_3:
+                cursor.execute("DELETE FROM requests WHERE city_name = ?", (city,))
+                cursor.execute("DELETE FROM archived_requests WHERE city_name = ?", (city,))
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('one_time_wipe_3_more_disabled', 'done')")
+            print("Successfully wiped database logs for Pompano, Aventura, and Sea Ranch Lakes.")
+    except Exception as e:
+        print(f"Error during one-time wipe of 3 disabled cities: {e}")
+
     conn.commit()
     conn.close()
 
