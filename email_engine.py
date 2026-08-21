@@ -214,7 +214,7 @@ TARGET_COUNTIES = [
     {"name": "Polk County", "email": "Records@PolkClerkFL.gov", "type": "email"},
     {"name": "Sarasota County", "email": "PublicRecords@scgov.net", "type": "email"},
     {"name": "St. Johns County", "email": "publicrecords@sjcfl.us", "type": "email"},
-    {"name": "St. Lucie County", "email": "aghlc.nm@gmail.com", "type": "email"},
+    {"name": "St. Lucie County", "email": "erick.gill@stlucieco.gov", "type": "email"},
     {"name": "Volusia County", "email": "", "type": "none"}
 ]
 
