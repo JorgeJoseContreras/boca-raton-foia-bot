@@ -117,7 +117,7 @@ TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@my
     {"name": "City of Palm Bay", "email": "cityclerk@pbfl.org", "type": "email"},
     {"name": "City of Palm Beach Gardens", "email": "cityclerk@pbgfl.com", "type": "email"},
     {"name": "City of Panama City", "email": "cityclerk@panamacity.gov", "type": "email"},
-    {"name": "City of Pembroke Pines", "email": "cityclerk@ppines.com", "type": "email"},
+    {"name": "City of Pembroke Pines", "email": "+19545178402", "type": "fax"},
     {"name": "City of Pensacola", "email": "cityclerk@cityofpensacola.com", "type": "email"},
     {"name": "City of Port St. Lucie", "email": "cityclerk@cityofpsl.com", "type": "email"},
     {"name": "City of Riviera Beach", "email": "cityclerk@rivierabeach.org", "type": "email"},

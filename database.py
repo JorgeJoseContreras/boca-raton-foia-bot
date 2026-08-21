@@ -244,6 +244,27 @@ def init_db():
     except Exception as e:
         print(f"Error during one-time wipe of 21 cities: {e}")
 
+    # One-time seed for Margate and Lighthouse Point last sent times
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'seed_last_sent_margate_lhp'")
+        row = cursor.fetchone()
+        if not row:
+            import uuid
+            seed_data = [
+                ("City of Margate", "recordsmanagement@margatefl.com", "2026-08-20 18:34:00"),
+                ("City of Lighthouse Point", "lhpadmin@lighthousepoint.com", "2026-08-20 18:34:00")
+            ]
+            for city, email, ts in seed_data:
+                batch_id = str(uuid.uuid4())
+                cursor.execute('''
+                    INSERT INTO requests (batch_id, city_name, recipient_email, record_type, subject, body_preview, status, timestamp)
+                    VALUES (?, ?, ?, 'Email Request', 'Florida Chapter 119 Public Records Request', 'Sent manually (screenshot verified)', 'Sent', ?)
+                ''', (batch_id, city, email, ts))
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('seed_last_sent_margate_lhp', 'done')")
+            print("Successfully seeded Margate and Lighthouse Point last sent records.")
+    except Exception as e:
+        print(f"Error seeding Margate/LHP: {e}")
+
     conn.commit()
     conn.close()
 
