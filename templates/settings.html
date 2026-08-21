@@ -191,6 +191,19 @@
                     </ul>
                 </div>
             </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="lisPendensTemplate">Lis Pendens County Request Text Template</label>
+                <textarea id="lisPendensTemplate" rows="11" style="line-height: 1.5; font-family: monospace; font-size: 12.5px;">{{ settings.lis_pendens_template }}</textarea>
+                <div style="margin-top: 8px; font-size: 12px; color: #555; background: #f0f4f8; border: 1px solid #d0dbe5; padding: 10px 14px; border-radius: 4px;">
+                    <strong>Dynamic Placeholders:</strong>
+                    <ul style="margin: 5px 0 0 18px; padding: 0;">
+                        <li><code>{county_name}</code>: Dynamically evaluated to the specific recipient county name.</li>
+                        <li><code>{start_date}</code>: Dynamically evaluated to the search start date (the last 30 days).</li>
+                        <li><code>{end_date}</code>: Dynamically evaluated to the live date of dispatch (e.g., <em>August 21, 2026</em>).</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Date Range Settings -->
@@ -360,6 +373,7 @@
             
             const use_ai = document.querySelector('input[name="use_gemini_ai"]:checked').value;
             const template = document.getElementById('foiaTemplate').value;
+            const lis_pendens_template = document.getElementById('lisPendensTemplate').value;
             const offset = document.getElementById('startDateOffset').value;
             const dept = document.getElementById('delrayDept').value;
             const rtype = document.getElementById('delrayRecordType').value;
@@ -389,6 +403,7 @@
                     body: JSON.stringify({
                         use_gemini_ai: use_ai,
                         foia_template: template,
+                        lis_pendens_template: lis_pendens_template,
                         start_date_days_ago: offset,
                         delray_dept: dept,
                         delray_record_type: rtype,

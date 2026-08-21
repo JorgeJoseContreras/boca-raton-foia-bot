@@ -188,6 +188,11 @@ TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@my
     {"name": "Village of Wellington", "email": "clerk@wellingtonfl.gov", "type": "email"}
 ]
 
+TARGET_COUNTIES = [
+    {"name": "Alachua County", "email": "osr@alachuaclerk.org", "type": "email"},
+    {"name": "Brevard County", "email": "PublicRecordsRequests@brevardclerk.us", "type": "email"}
+]
+
 def send_telegram_notification(message):
     from telegram_bot import get_saved_chat_id, get_bot_token
     token = get_bot_token()
@@ -295,7 +300,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         print(f"Error generating content via Gemini API for {city_name}: {e}")
         return subject_default, standard_body
 
-def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None, smtp_server_session=None):
+def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None, smtp_server_session=None, record_type="Email Request"):
     """
     Sends an email via SMTP to a specific municipality target.
     """
@@ -305,7 +310,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
     
     if not sender_email or not sender_password:
         msg = "SMTP Credentials not configured (SENDER_EMAIL or SENDER_PASSWORD missing)."
-        log_request("Failed", "Email Request", target_email, "N/A", msg, city_name=city_name, batch_id=batch_id)
+        log_request("Failed", record_type, target_email, "N/A", msg, city_name=city_name, batch_id=batch_id)
         return {"status": "error", "message": msg, "city": city_name}
 
     if custom_subject and custom_body:
@@ -314,7 +319,7 @@ def send_single_foia_email(city_name, target_email, custom_subject=None, custom_
         subject, body = generate_foia_content(city_name=city_name)
     
     # 1. Log in progress immediately
-    req_id = log_request("Sending...", "Email Request", target_email, subject, "Preparing transmission...", city_name=city_name, batch_id=batch_id)
+    req_id = log_request("Sending...", record_type, target_email, subject, "Preparing transmission...", city_name=city_name, batch_id=batch_id)
     
     try:
         msg = MIMEMultipart()
@@ -802,4 +807,52 @@ def retroactive_sync_bodies():
         
     print(f"Retroactive body sync completed. Updated {updated_count} responses.")
     return {"status": "success", "updated_count": updated_count}
+
+def generate_lis_pendens_content(county_name):
+    """
+    Generates Lis Pendens email copy using dynamic variables:
+    {county_name}, {start_date} (last 30 days), and {end_date} (current date).
+    """
+    from database import get_setting
+    import datetime
+    
+    end_dt = datetime.datetime.now()
+    days_offset = int(get_setting("start_date_days_ago", "30") or "30")
+    start_dt = end_dt - datetime.timedelta(days=days_offset)
+    
+    start_date_str = start_dt.strftime("%B %d, %Y")
+    end_date_str = end_dt.strftime("%B %d, %Y")
+    
+    custom_template = get_setting("lis_pendens_template")
+    if not custom_template:
+        from database import DEFAULT_LIS_PENDENS_TEMPLATE
+        custom_template = DEFAULT_LIS_PENDENS_TEMPLATE
+        
+    clean_name = county_name.replace(" County", "").strip()
+    
+    body = custom_template.replace("{county_name}", clean_name)
+    body = body.replace("{start_date}", start_date_str)
+    body = body.replace("{end_date}", end_date_str)
+    
+    subject = f"Florida Chapter 119 Public Records Request - Lis Pendens & Foreclosures - {county_name}"
+    return subject, body
+
+def send_single_county_request(county_name):
+    """
+    Sends the Lis Pendens public records request to a single county target.
+    """
+    county = next((c for c in TARGET_COUNTIES if c["name"] == county_name), None)
+    if not county:
+        return {"status": "error", "message": f"County {county_name} not found"}
+        
+    recipient = county["email"]
+    subject, body = generate_lis_pendens_content(county_name)
+    
+    return send_single_foia_email(
+        city_name=county_name,
+        target_email=recipient,
+        custom_subject=subject,
+        custom_body=body,
+        record_type="County Lis Pendens Email"
+    )
 

@@ -16,6 +16,18 @@ DEFAULT_TEMPLATE = (
     "Thank you for your assistance."
 )
 
+DEFAULT_LIS_PENDENS_TEMPLATE = (
+    "Dear Clerk of Court / Records Custodian of {county_name} County,\n\n"
+    "Pursuant to Florida Sunshine Law (Chapter 119, F.S.), I am submitting a formal public records request for the following digital records within {county_name} County, split across distinct departmental queries:\n\n"
+    "Lis Pendens Filings: A digital export, registry, or standard report of all recorded Notices of Lis Pendens (or equivalent pending litigation filings affecting real property) recorded between {start_date} and {end_date}, including instrument/recording number, recording date, plaintiff, defendant, case number, property address, and Folio / Parcel ID (in native format/CSV if available).\n\n"
+    "Final Foreclosure Judgments & Scheduled Auctions: A list or report of all active/pending foreclosure cases with upcoming scheduled clerk auctions as of {end_date}, including case number, parcel ID, property address, and scheduled auction date.\n\n"
+    "Please note that I accept standard system exports, existing reports, or existing database dumps in their native format (such as CSV or Excel), and do not require the creation of a new record or custom query.\n\n"
+    "Please transmit all electronic files and CSV/Excel exports to: jorge.property.123@gmail.com\n\n"
+    "If a different submission format, portal, or method of request is required by your office, please notify me at the above email address and I will comply promptly.\n\n"
+    "If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.\n\n"
+    "Thank you for your assistance."
+)
+
 def get_connection():
     conn = sqlite3.connect(DATABASE_PATH, timeout=60.0)
     try:
@@ -158,6 +170,7 @@ def init_db():
     # Seed default settings if missing
     defaults = {
         "foia_template": DEFAULT_TEMPLATE,
+        "lis_pendens_template": DEFAULT_LIS_PENDENS_TEMPLATE,
         "start_date_days_ago": "30",
         "delray_dept": "Code Enforcement",
         "delray_record_type": "Code Violations",

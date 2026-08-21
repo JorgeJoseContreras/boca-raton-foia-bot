@@ -6,7 +6,7 @@ import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from database import init_db, get_all_requests, get_all_responses, get_setting, set_setting, log_response, update_request_status_by_fax_id, clear_all_requests, get_archived_requests, purge_archived_requests, get_last_sent_timestamps, get_all_inbound_faxes, log_inbound_fax, get_response_by_id, DATABASE_PATH, delete_response_by_id, restore_response_by_id
-from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES, retroactive_sync_bodies
+from email_engine import send_all_foia_requests, send_single_foia_email, check_inbox, generate_foia_content, send_telegram_notification, sync_all_past_attachments, ATTACHMENTS_DIR, TARGET_MUNICIPALITIES, TARGET_COUNTIES, send_single_county_request, retroactive_sync_bodies
 from fax_engine import send_all_foia_faxes, send_single_foia_fax, PDF_STORAGE_DIR
 from telegram_bot import start_bot_thread
 
@@ -202,6 +202,12 @@ def index():
         key=lambda m: (1 if m.get("type") == "none" or not m.get("email") else 0, m["name"])
     )
 
+    # Sort counties: move ones with type 'none' (disabled) to the bottom
+    sorted_counties = sorted(
+        TARGET_COUNTIES,
+        key=lambda m: (1 if m.get("type") == "none" or not m.get("email") else 0, m["name"])
+    )
+
     return render_template(
         "index.html",
         requests=raw_requests,
@@ -211,6 +217,8 @@ def index():
         next_run_time=next_run,
         municipalities=sorted_municipalities,
         total_cities=len(TARGET_MUNICIPALITIES),
+        counties=sorted_counties,
+        total_counties=len(TARGET_COUNTIES),
         sender_email=sender_email,
         last_sent=last_sent,
         inbound_faxes=inbound_faxes
@@ -219,7 +227,7 @@ def index():
 @app.route("/settings")
 def settings_page():
     all_keys = [
-        "use_gemini_ai", "foia_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency",
+        "use_gemini_ai", "foia_template", "lis_pendens_template", "start_date_days_ago", "delray_dept", "delray_record_type", "schedule_frequency",
         "telnyx_fax_number", "telnyx_connection_id", "telnyx_api_key",
         "fax_boca_raton", "fax_delray_beach", "fax_coconut_creek", "fax_parkland", "fax_hillsboro_beach", "fax_highland_beach", "fax_deerfield_beach",
         "fax_coral_springs", "fax_boynton_beach", "fax_pompano_beach", "fax_sea_ranch_lakes", "fax_lauderhill", "fax_aventura"
@@ -314,6 +322,32 @@ def trigger_single_request():
     t.start()
     
     return jsonify({"status": "success", "message": f"FOIA request triggered for {city_name}."})
+
+@app.route("/api/trigger_county", methods=["POST"])
+def trigger_county_request():
+    data = request.get_json(silent=True) or {}
+    county_name = data.get("county_name")
+    
+    if not county_name:
+        return jsonify({"status": "error", "message": "county_name required"}), 400
+        
+    target = next((c for c in TARGET_COUNTIES if c["name"] == county_name), None)
+    if not target:
+        return jsonify({"status": "error", "message": f"County {county_name} not found"}), 404
+        
+    print(f"[COUNTY DISPATCH] Spawning background thread for: {county_name}")
+    
+    def run_dispatch():
+        try:
+            send_single_county_request(county_name)
+        except Exception as e:
+            import traceback
+            print(f"[COUNTY DISPATCH ERROR] {traceback.format_exc()}")
+            
+    t = threading.Thread(target=run_dispatch)
+    t.start()
+    
+    return jsonify({"status": "success", "message": f"Lis Pendens request triggered for {county_name}."})
 
 @app.route("/api/schedule", methods=["GET", "POST"])
 def manage_schedule():

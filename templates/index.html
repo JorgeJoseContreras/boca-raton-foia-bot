@@ -497,6 +497,59 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+
+        <!-- Lis Pendens County Directory Table -->
+        <div class="directory-container" style="margin-top: 20px;">
+            <div class="directory-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Lis Pendens County Directory ({{ total_counties }} Counties)</span>
+                <button onclick="toggleCountyTable(this)" title="Expand" style="background: none; border: none; cursor: pointer; font-size: 16px; color: #555; padding: 0 4px; line-height: 1;" aria-label="Toggle county table">&#9654;</button>
+            </div>
+            <div id="countyTableWrapper" style="display: none;">
+            <table class="directory-table" id="countyTable">
+                <thead>
+                    <tr>
+                        <th style="width: 250px; cursor: pointer; user-select: none;" onclick="sortCountyTable(0, this)">County Name <span class="sort-icon">⇅</span></th>
+                        <th style="min-width: 320px; cursor: pointer; user-select: none;" onclick="sortCountyTable(1, this)">Records Custodian Email / Fax <span class="sort-icon">⇅</span></th>
+                        <th style="width: 200px; cursor: pointer; user-select: none;" onclick="sortCountyTable(2, this)">Last Sent <span class="sort-icon">⇅</span></th>
+                        <th style="width: 220px; cursor: pointer; user-select: none;" onclick="sortCountyTable(3, this)">Requested Data Format <span class="sort-icon">⇅</span></th>
+                        <th style="width: 100px; text-align: center;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in counties %}
+                    <tr {% if c.type == 'none' %}style="opacity: 0.55; background-color: #fcfcfc; color: #7f8c8d;"{% endif %}>
+                        <td><strong>{{ c.name }}</strong></td>
+                        <td>
+                            {% if c.type == 'none' %}
+                                <span style="font-size: 12px; color: #95a5a6; font-style: italic;">No contact info yet</span>
+                            {% else %}
+                                <code>{{ c.email }}</code> {% if c.type == 'fax' or c.email.startswith('+') %}<span style="font-size: 11px; color: #666;">(Fax)</span>{% endif %}
+                            {% endif %}
+                        </td>
+                        <td data-last-sent-for="{{ c.name }}">
+                            {% if last_sent.get(c.name) %}
+                                <span style="color: #047857; font-weight: 500;">{{ last_sent.get(c.name) }}</span>
+                            {% else %}
+                                <span style="color: #6b7280; font-style: italic;">Never</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.type == 'none' %}
+                                <span style="font-size: 12px; color: #bdc3c7; font-style: italic;">Disabled</span>
+                            {% elif c.type == 'fax' or c.email.startswith('+') %}
+                                Telnyx Cloud Fax (PDF Letter / Form)
+                            {% else %}
+                                Email Transmission (CSV / Excel)
+                            {% endif %}
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" data-county="{{ c.name }}" onclick="sendSingleCounty(this, this.getAttribute('data-county'))" {% if c.type == 'none' %}disabled style="cursor: not-allowed; opacity: 0.6;"{% endif %}>Send</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
             </div>
         </div>
 
@@ -727,6 +780,65 @@
             wrapper.style.display = collapsed ? '' : 'none';
             btn.innerHTML = collapsed ? '&#9660;' : '&#9654;';
             btn.title = collapsed ? 'Collapse' : 'Expand';
+        }
+
+        function toggleCountyTable(btn) {
+            const wrapper = document.getElementById('countyTableWrapper');
+            const collapsed = wrapper.style.display === 'none';
+            wrapper.style.display = collapsed ? '' : 'none';
+            btn.innerHTML = collapsed ? '&#9660;' : '&#9654;';
+            btn.title = collapsed ? 'Collapse' : 'Expand';
+        }
+
+        function sortCountyTable(colIdx, th) {
+            const table = document.getElementById('countyTable');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const asc = th.dataset.sortDir !== 'asc';
+            th.dataset.sortDir = asc ? 'asc' : 'desc';
+            table.querySelectorAll('th .sort-icon').forEach(s => s.textContent = '⇅');
+            th.querySelector('.sort-icon').textContent = asc ? '▲' : '▼';
+            rows.sort((a, b) => {
+                const aText = (a.cells[colIdx]?.innerText || '').trim().toLowerCase();
+                const bText = (b.cells[colIdx]?.innerText || '').trim().toLowerCase();
+                return asc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        }
+
+        async function sendSingleCounty(btn, countyName) {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="btn-spinner"></span> Sending...';
+            }
+            showToast(`Triggering Lis Pendens request for ${countyName}...`);
+            try {
+                const res = await fetch('/api/trigger_county', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ county_name: countyName })
+                });
+                const data = await res.json();
+                showToast(data.message || `Dispatched to ${countyName}`);
+                
+                // Poll table progressively to catch background dispatch completion
+                setTimeout(refreshRequestsTable, 600);
+                setTimeout(refreshRequestsTable, 2000);
+                setTimeout(refreshRequestsTable, 4500);
+                setTimeout(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Send';
+                    }
+                    refreshRequestsTable();
+                }, 6000);
+            } catch (err) {
+                showToast("Error triggering county request.");
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Send';
+                }
+            }
         }
 
         function sortDirTable(colIdx, th) {
