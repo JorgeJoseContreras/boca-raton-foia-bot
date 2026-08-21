@@ -465,10 +465,14 @@
                 </thead>
                 <tbody>
                     {% for m in municipalities %}
-                    <tr>
+                    <tr {% if m.type == 'none' %}style="opacity: 0.55; background-color: #fcfcfc; color: #7f8c8d;"{% endif %}>
                         <td><strong>{{ m.name }}</strong></td>
                         <td>
-                            <code>{{ m.email }}</code> {% if m.type == 'fax' or m.email.startswith('+') %}<span style="font-size: 11px; color: #666;">(Fax)</span>{% endif %}
+                            {% if m.type == 'none' %}
+                                <span style="font-size: 12px; color: #95a5a6; font-style: italic;">No contact info yet</span>
+                            {% else %}
+                                <code>{{ m.email }}</code> {% if m.type == 'fax' or m.email.startswith('+') %}<span style="font-size: 11px; color: #666;">(Fax)</span>{% endif %}
+                            {% endif %}
                         </td>
                         <td data-last-sent-for="{{ m.name }}">
                             {% if last_sent.get(m.name) %}
@@ -477,9 +481,17 @@
                                 <span style="color: #6b7280; font-style: italic;">Never</span>
                             {% endif %}
                         </td>
-                        <td>{% if m.type == 'fax' or m.email.startswith('+') %}Telnyx Cloud Fax (PDF Letter / Form){% else %}Email Transmission (CSV / Excel){% endif %}</td>
+                        <td>
+                            {% if m.type == 'none' %}
+                                <span style="font-size: 12px; color: #bdc3c7; font-style: italic;">Disabled</span>
+                            {% elif m.type == 'fax' or m.email.startswith('+') %}
+                                Telnyx Cloud Fax (PDF Letter / Form)
+                            {% else %}
+                                Email Transmission (CSV / Excel)
+                            {% endif %}
+                        </td>
                         <td style="text-align: center;">
-                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" data-city="{{ m.name }}" onclick="sendSingleCity(this, this.getAttribute('data-city'))">Send</button>
+                            <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" data-city="{{ m.name }}" onclick="sendSingleCity(this, this.getAttribute('data-city'))" {% if m.type == 'none' %}disabled style="cursor: not-allowed; opacity: 0.6;"{% endif %}>Send</button>
                         </td>
                     </tr>
                     {% endfor %}

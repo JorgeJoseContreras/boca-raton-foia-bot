@@ -279,6 +279,24 @@ def init_db():
     except Exception as e:
         print(f"Error during Boynton wipe: {e}")
 
+    # One-time wipe for 12 disabled cities (moving to bottom/Never)
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'one_time_wipe_12_disabled'")
+        row = cursor.fetchone()
+        if not row:
+            wipe_cities_12 = [
+                "City of Atlantis", "City of Jacksonville", "City of Naples", "City of Oakland Park",
+                "City of Port St. Lucie", "City of South Bay", "City of Sweetwater", "Town of Glen Ridge",
+                "Town of Jupiter Inlet Colony", "Town of Lantana", "Village of Golf", "Village of Tequesta"
+            ]
+            for city in wipe_cities_12:
+                cursor.execute("DELETE FROM requests WHERE city_name = ?", (city,))
+                cursor.execute("DELETE FROM archived_requests WHERE city_name = ?", (city,))
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('one_time_wipe_12_disabled', 'done')")
+            print("Successfully wiped database logs for the 12 disabled cities.")
+    except Exception as e:
+        print(f"Error during one-time wipe of 12 disabled cities: {e}")
+
     conn.commit()
     conn.close()
 

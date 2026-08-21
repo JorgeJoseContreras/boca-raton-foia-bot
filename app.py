@@ -196,6 +196,12 @@ def index():
     last_sent = get_last_sent_timestamps()
     inbound_faxes = get_all_inbound_faxes()
 
+    # Sort municipalities: move ones with type 'none' (disabled) to the bottom
+    sorted_municipalities = sorted(
+        TARGET_MUNICIPALITIES,
+        key=lambda m: (1 if m.get("type") == "none" or not m.get("email") else 0, m["name"])
+    )
+
     return render_template(
         "index.html",
         requests=raw_requests,
@@ -203,7 +209,7 @@ def index():
         responses=responses,
         schedule_freq=schedule_freq,
         next_run_time=next_run,
-        municipalities=TARGET_MUNICIPALITIES,
+        municipalities=sorted_municipalities,
         total_cities=len(TARGET_MUNICIPALITIES),
         sender_email=sender_email,
         last_sent=last_sent,
