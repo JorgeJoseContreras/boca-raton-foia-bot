@@ -190,6 +190,7 @@ TARGET_MUNICIPALITIES = [{"name": "City of Boca Raton", "email": "brcityclerk@my
 
 TARGET_COUNTIES = [
     {"name": "Alachua County", "email": "osr@alachuaclerk.org", "type": "email"},
+    {"name": "Bay County", "email": "", "type": "none"},
     {"name": "Brevard County", "email": "", "type": "none"},
     {"name": "Broward County", "email": "", "type": "none"},
     {"name": "Collier County", "email": "PublicRecordRequest@collier.gov", "type": "email"},
