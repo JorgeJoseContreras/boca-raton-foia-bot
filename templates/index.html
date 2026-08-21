@@ -935,7 +935,11 @@
                 showToast(data.message);
                 setTimeout(() => location.reload(), 3000);
             } catch (err) {
-                showToast("Error triggering batch fax dispatch        async function refreshRequestsTable() {
+                showToast("Error triggering batch fax dispatch.");
+            }
+        }
+
+        async function refreshRequestsTable() {
             try {
                 const res = await fetch('/api/requests');
                 const data = await res.json();
