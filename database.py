@@ -267,6 +267,18 @@ def init_db():
     except Exception as e:
         print(f"Error seeding Margate/LHP: {e}")
 
+    # One-time wipe for Boynton Beach (moved from fax to email)
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'one_time_wipe_boynton'")
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute("DELETE FROM requests WHERE city_name = 'City of Boynton Beach'")
+            cursor.execute("DELETE FROM archived_requests WHERE city_name = 'City of Boynton Beach'")
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('one_time_wipe_boynton', 'done')")
+            print("Successfully wiped database logs for City of Boynton Beach.")
+    except Exception as e:
+        print(f"Error during Boynton wipe: {e}")
+
     conn.commit()
     conn.close()
 
