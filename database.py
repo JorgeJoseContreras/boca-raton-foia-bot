@@ -251,8 +251,8 @@ def init_db():
         if not row:
             import uuid
             seed_data = [
-                ("City of Margate", "recordsmanagement@margatefl.com", "2026-08-20 18:34:00"),
-                ("City of Lighthouse Point", "lhpadmin@lighthousepoint.com", "2026-08-20 18:34:00")
+                ("City of Margate", "recordsmanagement@margatefl.com", "2026-08-20 22:34:00"),
+                ("City of Lighthouse Point", "lhpadmin@lighthousepoint.com", "2026-08-20 22:34:00")
             ]
             for city, email, ts in seed_data:
                 batch_id = str(uuid.uuid4())
@@ -262,6 +262,8 @@ def init_db():
                 ''', (batch_id, city, email, ts))
             cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('seed_last_sent_margate_lhp', 'done')")
             print("Successfully seeded Margate and Lighthouse Point last sent records.")
+        # Ensure correct timezone representation in database (22:34:00 UTC = 06:34:00 PM EDT)
+        cursor.execute("UPDATE requests SET timestamp = '2026-08-20 22:34:00' WHERE city_name IN ('City of Margate', 'City of Lighthouse Point') AND body_preview LIKE '%Sent manually%'")
     except Exception as e:
         print(f"Error seeding Margate/LHP: {e}")
 
