@@ -223,6 +223,27 @@ def init_db():
     except Exception as e:
         print(f"Error during one-time wipe: {e}")
 
+    # One-time wipe for the 21 specified cities (new updates)
+    try:
+        cursor.execute("SELECT value FROM settings WHERE key = 'one_time_wipe_21_cities'")
+        row = cursor.fetchone()
+        if not row:
+            wipe_cities_21 = [
+                "City of Homestead", "Town of West Miami", "Town of Southwest Ranches", "Town of South Palm Beach",
+                "Town of Loxahatchee Groves", "Town of Manalapan", "Town of Golden Beach", "Town of Hypoluxo",
+                "Town of Lake Clarke Shores", "Town of Cloud Lake", "Town of Bay Harbor Islands", "City of Titusville",
+                "City of Sebring", "City of Westlake", "City of Key West", "City of Miami Gardens",
+                "City of Ocala", "City of Okeechobee", "City of Daytona Beach", "City of Hialeah Gardens",
+                "Town of Haverhill"
+            ]
+            for city in wipe_cities_21:
+                cursor.execute("DELETE FROM requests WHERE city_name = ?", (city,))
+                cursor.execute("DELETE FROM archived_requests WHERE city_name = ?", (city,))
+            cursor.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('one_time_wipe_21_cities', 'done')")
+            print("Successfully wiped database logs for the 21 specified cities.")
+    except Exception as e:
+        print(f"Error during one-time wipe of 21 cities: {e}")
+
     conn.commit()
     conn.close()
 
