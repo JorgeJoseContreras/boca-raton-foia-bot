@@ -143,12 +143,6 @@ def sync_historical_inbound_faxes():
         import traceback
         print(f"Error syncing historical faxes: {traceback.format_exc()}")
 
-# Sync historical faxes and past email attachments on startup
-from datetime import datetime
-scheduler.add_job(func=sync_historical_inbound_faxes, trigger="date", run_date=datetime.now())
-scheduler.add_job(func=sync_all_past_attachments, trigger="date", run_date=datetime.now())
-scheduler.add_job(func=retroactive_sync_bodies, trigger="date", run_date=datetime.now())
-
 # Shut down scheduler gracefully
 atexit.register(lambda: scheduler.shutdown())
 
