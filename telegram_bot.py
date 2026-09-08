@@ -29,7 +29,7 @@ def save_chat_id(chat_id):
         print(f"Error saving chat_id: {e}")
 
 def get_bot_token():
-    return os.getenv("TELEGRAM_BOT_TOKEN", "8856942581:AAFNDJOsutskSckuS883irZE8e4VVjskQBM")
+    return os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 def send_telegram_msg(chat_id, text, reply_markup=None):
     token = get_bot_token()
