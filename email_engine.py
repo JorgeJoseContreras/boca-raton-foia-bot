@@ -290,41 +290,68 @@ def generate_foia_content(city_name="City of Boca Raton"):
                 .replace("City of Boca Raton", city_name))
         return subject_default, body
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        return subject_default, standard_body
+    prompt = (
+        f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law).\n"
+        f"The salutation MUST be addressed dynamically and accurately to: Dear {addressee},\n"
+        f"The request MUST be split across distinct numbered items with these exact specifications:\n"
+        f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, Folio / Parcel ID, and violation description (in native format/CSV if available).\n"
+        f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
+        f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed in the last 30 days, including parcel ID, site address, and contractor/owner details.\n\n"
+        f"Explicitly include a clause stating that you accept standard system exports, existing reports, or existing database dumps in their native format (such as CSV or Excel), and do not require the creation of a new record or custom query.\n"
+        f"Explicitly include instruction to deliver data exports to email: jorge.property.123@gmail.com\n"
+        f"Explicitly include this cost cap estimate clause: 'If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.'\n"
+        f"The email should not contain any name or signature at the end (just end with 'Thank you for your assistance.').\n"
+        f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
+    )
 
-    try:
-        client = genai.Client(api_key=api_key)
-        prompt = (
-            f"Generate a formal public records request email under Florida Chapter 119 (Sunshine Law).\n"
-            f"The salutation MUST be addressed dynamically and accurately to: Dear {addressee},\n"
-            f"The request MUST be split across distinct numbered items with these exact specifications:\n"
-            f"1. Active Code Violations: A digital export or standard report of all open/active code enforcement violations as of {req_date}, including case number, property address, Folio / Parcel ID, and violation description (in native format/CSV if available).\n"
-            f"2. Condemned Properties: A list or report of all properties currently designated as condemned or unfit for human habitation as of {req_date}.\n"
-            f"3. Demolition Permits: A list of all demolition permits applied for, active, or completed in the last 30 days, including parcel ID, site address, and contractor/owner details.\n\n"
-            f"Explicitly include a clause stating that you accept standard system exports, existing reports, or existing database dumps in their native format (such as CSV or Excel), and do not require the creation of a new record or custom query.\n"
-            f"Explicitly include instruction to deliver data exports to email: jorge.property.123@gmail.com\n"
-            f"Explicitly include this cost cap estimate clause: 'If search, retrieval, or redaction fees are expected to exceed $25.00, please provide an itemized cost estimate for approval prior to fulfilling the request.'\n"
-            f"The email should not contain any name or signature at the end (just end with 'Thank you for your assistance.').\n"
-            f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
-        )
-        
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt,
-        )
-        
-        text = response.text.strip()
-        if text.startswith("```"):
-            lines = text.splitlines()
-            text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+    if api_key:
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt,
+            )
             
-        data = json.loads(text)
-        return data.get("subject", subject_default), data.get("body", standard_body)
-    except Exception as e:
-        print(f"Error generating content via Gemini API for {city_name}: {e}")
-        return subject_default, standard_body
+            text = response.text.strip()
+            if text.startswith("```"):
+                lines = text.splitlines()
+                text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+                
+            data = json.loads(text)
+            return data.get("subject", subject_default), data.get("body", standard_body)
+        except Exception as e:
+            print(f"Error generating content via Gemini API for {city_name}: {e}")
+
+    # Seamless Groq LLM Fallback
+    groq_key = os.getenv("GROQ_API_KEY") or get_setting("groq_api_key", "")
+    if groq_key:
+        try:
+            import urllib.request, json as py_json
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            headers = {
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": "qwen/qwen3.8-27b",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.5,
+                "max_tokens": 400
+            }
+            req = urllib.request.Request(url, data=py_json.dumps(payload).encode("utf-8"), headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                g_data = py_json.loads(resp.read().decode("utf-8"))
+                g_text = g_data["choices"][0]["message"]["content"].strip()
+                if g_text.startswith("```"):
+                    lines = g_text.splitlines()
+                    g_text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+                parsed = py_json.loads(g_text)
+                print(f"Successfully generated FOIA draft for {city_name} via Groq fallback.")
+                return parsed.get("subject", subject_default), parsed.get("body", standard_body)
+        except Exception as ge:
+            print(f"Error generating content via Groq API for {city_name}: {ge}")
+
+    return subject_default, standard_body
 
 def send_single_foia_email(city_name, target_email, custom_subject=None, custom_body=None, batch_id=None, smtp_server_session=None, record_type="Email Request"):
     """
