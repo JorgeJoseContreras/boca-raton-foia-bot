@@ -304,25 +304,7 @@ def generate_foia_content(city_name="City of Boca Raton"):
         f"Return JSON format ONLY with keys 'subject' and 'body'. Do not include markdown codeblocks."
     )
 
-    if api_key:
-        try:
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt,
-            )
-            
-            text = response.text.strip()
-            if text.startswith("```"):
-                lines = text.splitlines()
-                text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
-                
-            data = json.loads(text)
-            return data.get("subject", subject_default), data.get("body", standard_body)
-        except Exception as e:
-            print(f"Error generating content via Gemini API for {city_name}: {e}")
-
-    # Seamless Groq LLM Fallback
+    # Primary: Groq High-Speed LLM (Zero Gemini dependency)
     groq_key = os.getenv("GROQ_API_KEY") or get_setting("groq_api_key", "")
     if groq_key:
         try:
@@ -346,10 +328,29 @@ def generate_foia_content(city_name="City of Boca Raton"):
                     lines = g_text.splitlines()
                     g_text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
                 parsed = py_json.loads(g_text)
-                print(f"Successfully generated FOIA draft for {city_name} via Groq fallback.")
+                print(f"Successfully generated FOIA draft for {city_name} via Groq.")
                 return parsed.get("subject", subject_default), parsed.get("body", standard_body)
         except Exception as ge:
             print(f"Error generating content via Groq API for {city_name}: {ge}")
+
+    # Fallback to Gemini only if Groq is unconfigured or failed
+    if api_key:
+        try:
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt,
+            )
+            
+            text = response.text.strip()
+            if text.startswith("```"):
+                lines = text.splitlines()
+                text = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
+                
+            data = json.loads(text)
+            return data.get("subject", subject_default), data.get("body", standard_body)
+        except Exception as e:
+            print(f"Error generating content via Gemini API for {city_name}: {e}")
 
     return subject_default, standard_body
 
